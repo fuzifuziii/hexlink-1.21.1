@@ -26,6 +26,7 @@ class FunctionSpirit(val manifestAt: ResourceLocation, val manifestIn: ResourceL
             return Spirit.Manifestation(manifestAtCost, count){
                 for(i in 0..<it){
                     val source = caster.createCommandSourceStack()
+                        .withSuppressedOutput()
                         .withPosition(position)
                         .withLevel(world)
                     world.server.functions.execute(function.get(), source)
@@ -41,6 +42,7 @@ class FunctionSpirit(val manifestAt: ResourceLocation, val manifestIn: ResourceL
             return Spirit.Manifestation(manifestInCost, count){
                 for(i in 0..<it){
                     val source = caster.createCommandSourceStack()
+                        .withSuppressedOutput()
                         .withEntity(entity)
                         .withPosition(entity.position())
                         .withLevel(world)

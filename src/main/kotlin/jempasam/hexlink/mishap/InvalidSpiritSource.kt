@@ -1,24 +1,26 @@
 package jempasam.hexlink.mishap
 
-import at.petrak.hexcasting.api.misc.FrozenColorizer
-import at.petrak.hexcasting.api.spell.casting.CastingContext
-import at.petrak.hexcasting.api.spell.iota.Iota
-import at.petrak.hexcasting.api.spell.mishaps.Mishap
-import net.minecraft.entity.effect.StatusEffectInstance
-import net.minecraft.entity.effect.StatusEffects
-import net.minecraft.text.Text
-import net.minecraft.util.DyeColor
+import at.petrak.hexcasting.api.pigment.FrozenPigment
+import at.petrak.hexcasting.api.casting.eval.CastingEnvironment
+import at.petrak.hexcasting.api.casting.iota.Iota
+import at.petrak.hexcasting.api.casting.mishaps.Mishap
+import at.petrak.hexcasting.api.utils.TreeList
+import net.minecraft.world.effect.MobEffectInstance
+import net.minecraft.world.effect.MobEffects
+import net.minecraft.network.chat.Component
+import net.minecraft.world.item.DyeColor
 
 class InvalidSpiritSource(val iota: Iota) : Mishap() {
-    override fun errorMessage(ctx: CastingContext, errorCtx: Context): Text {
-        return Text.translatable("hexlink.mishap.invalid_spirit_source", iota.type.display(iota.serialize()))
+    override fun errorMessage(ctx: CastingEnvironment, errorCtx: Context): Component {
+        return Component.translatable("hexlink.mishap.invalid_spirit_source", iota.display())
     }
 
-    override fun accentColor(ctx: CastingContext, errorCtx: Context): FrozenColorizer {
+    override fun accentColor(ctx: CastingEnvironment, errorCtx: Context): FrozenPigment {
         return dyeColor(DyeColor.PINK)
     }
 
-    override fun execute(ctx: CastingContext, errorCtx: Context, stack: MutableList<Iota>) {
-        ctx.caster.addStatusEffect(StatusEffectInstance(StatusEffects.BLINDNESS,40))
+    override fun execute(ctx: CastingEnvironment, errorCtx: Context, stack: TreeList<Iota>): TreeList<Iota> {
+        (ctx.castingEntity as? net.minecraft.world.entity.LivingEntity)?.addEffect(MobEffectInstance(MobEffects.BLINDNESS,40))
+        return stack
     }
 }

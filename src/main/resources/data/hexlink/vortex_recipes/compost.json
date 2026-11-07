@@ -1,7 +1,0 @@
-{
-  "type": "hexlink:composting",
-  "catalyzer": [ {"type": "hexlink:block", "value": "minecraft:composter"} ],
-  "result": [ {"type": "hexlink:block", "value": "minecraft:composter"} ],
-  "multiplier": 10,
-  "composting_result": {"type": "hexlink:item", "value": "minecraft:bone_meal"}
-}

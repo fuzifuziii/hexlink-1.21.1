@@ -1,88 +1,79 @@
 package jempasam.hexlink.utils
 
+import com.mojang.serialization.Codec
+import com.mojang.serialization.DataResult
 import com.mojang.serialization.Lifecycle
-import net.minecraft.tag.TagKey
-import net.minecraft.util.Identifier
-import net.minecraft.util.math.random.Random
-import net.minecraft.util.registry.Registry
-import net.minecraft.util.registry.RegistryEntry
-import net.minecraft.util.registry.RegistryKey
-import net.minecraft.util.registry.SimpleRegistry
+import net.minecraft.core.MappedRegistry
+import net.minecraft.core.Registry
+import net.minecraft.resources.ResourceKey
+import net.minecraft.resources.ResourceLocation
 
-class LoadableRegistry<T>(key: RegistryKey<out Registry<T>>, lifecycle: Lifecycle): Registry<T>(key, lifecycle) {
+/**
+ * A registry-like lookup table that can be emptied and repopulated at runtime.
+ *
+ * In 1.21.1 [Registry] is an interface backed by NeoForge's registry machinery and entries
+ * cannot be removed from it. Hexlink needs to rebuild its extractor / special-spirit
+ * tables whenever the server syncs data to the client, so those tables live here instead.
+ *
+ * The backing [MappedRegistry] is exposed through [inner] for the places that still need a
+ * genuine [Registry] (vanilla registration helpers, codecs).
+ */
+class LoadableRegistry<T>(val key: ResourceKey<Registry<T>>, private val lifecycle: Lifecycle) {
 
-    private var inner = SimpleRegistry<T>(key, lifecycle, null)
-    private var locked = true
+    var inner: MappedRegistry<T> = MappedRegistry(key, lifecycle)
+        private set
 
+    private var locked = false
 
-    fun clear(){
-        inner = SimpleRegistry(key, lifecycle, null)
-        locked=false
+    /** Drop every entry and allow registration again. */
+    fun clear() {
+        inner = MappedRegistry(key, lifecycle)
+        locked = false
     }
 
-    fun lock(){
-        locked=true
+    /** Freeze the table so no further entries can be added. */
+    fun lock() {
+        locked = true
     }
 
-    fun register(id: Identifier, value: T) {
-        if (locked) throw IllegalStateException("Registry is locked")
+    val isLocked: Boolean get() = locked
+
+    fun register(id: ResourceLocation, value: T) {
+        if (locked) throw IllegalStateException("Registry ${key.location()} is locked")
         Registry.register(inner, id, value)
     }
 
-    override fun iterator() = inner.iterator()
+    fun register(key: ResourceKey<T>, value: T) {
+        if (locked) throw IllegalStateException("Registry ${key.location()} is locked")
+        Registry.register(inner, key, value)
+    }
 
-    override fun get(id: Identifier?) = inner.get(id)
+    fun get(id: ResourceLocation): T? = inner.get(id)
 
-    override fun get(index: Int) = inner.get(index)
+    fun get(id: ResourceKey<T>): T? = inner.get(id)
 
-    override fun size() = inner.size()
+    fun getId(value: T): ResourceLocation? = inner.getKey(value)
 
-    override fun getLifecycle() = inner.lifecycle
+    fun getKey(value: T): ResourceLocation? = inner.getKey(value)
 
-    override fun getIds() = inner.ids
+    fun size(): Int = inner.size()
 
-    override fun getEntrySet() = inner.entrySet
+    fun contains(id: ResourceLocation): Boolean = inner.containsKey(id)
 
-    override fun getKeys() = inner.keys
+    val entrySet: Set<Map.Entry<ResourceKey<T>, T>> get() = inner.entrySet()
 
-    override fun getRandom(random: Random?) = inner.getRandom(random)
+    val keys: Set<ResourceKey<T>> get() = inner.registryKeySet()
 
-    override fun containsId(id: Identifier?) = inner.containsId(id)
+    fun asSequence(): Sequence<T> = inner.stream().toList().asSequence()
 
-    override fun freeze() = inner.freeze()
+    operator fun iterator(): Iterator<T> = inner.iterator()
 
-    override fun getEntry(rawId: Int) = inner.getEntry(rawId)
-
-    override fun streamEntries() = inner.streamEntries()
-
-    override fun streamTagsAndEntries() = inner.streamTagsAndEntries()
-
-    override fun streamTags() = inner.streamTags()
-
-    override fun clearTags() = inner.clearTags()
-
-    override fun populateTags(tagEntries: MutableMap<TagKey<T>, MutableList<RegistryEntry<T>>>?) = inner.populateTags(tagEntries)
-
-    override fun containsTag(tag: TagKey<T>?) = inner.containsTag(tag)
-
-    override fun getOrCreateEntryList(tag: TagKey<T>?) = inner.getOrCreateEntryList(tag)
-
-    override fun getEntryList(tag: TagKey<T>?) = inner.getEntryList(tag)
-
-    override fun getEntry(key: RegistryKey<T>) = inner.getEntry(key)
-
-    override fun createEntry(value: T) = inner.createEntry(value)
-
-    override fun getOrCreateEntryDataResult(key: RegistryKey<T>?) = inner.getOrCreateEntryDataResult(key)
-
-    override fun getOrCreateEntry(key: RegistryKey<T>?) = inner.getOrCreateEntry(key)
-
-    override fun contains(key: RegistryKey<T>?) = inner.contains(key)
-
-    override fun getEntryLifecycle(entry: T) = inner.getEntryLifecycle(entry)
-
-    override fun getId(value: T) = inner.getId(value)
-    override fun getKey(entry: T) = inner.getKey(entry)
-    override fun get(key: RegistryKey<T>?) = inner.get(key)
-    override fun getRawId(value: T?) = inner.getRawId(value)
+    /** Codec that resolves entries by their registry name, mirroring [Registry.byNameCodec]. */
+    val codec: Codec<T> = ResourceLocation.CODEC.flatXmap(
+        { id -> get(id)?.let { DataResult.success(it) } ?: DataResult.error { "Unknown id: $id" } },
+        { value ->
+            getId(value)?.let { DataResult.success(it) }
+                ?: DataResult.error { "Unregistered value: $value" }
+        }
+    )
 }

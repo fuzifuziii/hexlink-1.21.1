@@ -2,17 +2,16 @@ package jempasam.hexlink.block
 
 import jempasam.hexlink.HexlinkMod
 import jempasam.hexlink.entity.HexlinkEntities
-import jempasam.hexlink.entity.block.BigTabletBlockEntity
-import jempasam.hexlink.entity.block.HexVortexBlockEntity
-import net.minecraft.block.AbstractBlock
-import net.minecraft.block.Block
-import net.minecraft.block.Material
-import net.minecraft.sound.BlockSoundGroup
-import net.minecraft.util.Identifier
-import net.minecraft.util.math.Box
-import net.minecraft.util.math.Vec3d
-import net.minecraft.util.registry.Registry
-import net.minecraft.util.shape.VoxelShapes
+import net.minecraft.core.Registry
+import net.minecraft.core.registries.Registries
+import net.minecraft.resources.ResourceLocation
+import net.minecraft.world.level.block.Block
+import net.minecraft.world.level.block.SoundType
+import net.minecraft.world.level.block.state.BlockBehaviour
+import net.minecraft.world.level.material.MapColor
+import net.minecraft.world.phys.AABB
+import net.minecraft.world.phys.Vec3
+import net.minecraft.world.phys.shapes.Shapes
 
 object HexlinkBlocks {
 
@@ -24,25 +23,9 @@ object HexlinkBlocks {
         return block
     }
 
-    fun registerBlocks(){
+    /** Called from the NeoForge `RegisterEvent` for [Registries.BLOCK]. */
+    fun registerBlocks(registry: Registry<Block>){
         for(entry in blocks)
-            Registry.register(Registry.BLOCK, Identifier(HexlinkMod.MODID, entry.id), entry.block)
+            Registry.register(registry, ResourceLocation.fromNamespaceAndPath(HexlinkMod.MODID, entry.id), entry.block)
     }
-
-
-    val VORTEX: SpiritContainerBlock<HexVortexBlockEntity> = create( "vortex", SpiritContainerBlock(
-        AbstractBlock.Settings.of(Material.AMETHYST).nonOpaque().emissiveLighting{_,_,_->true}.luminance{_->6}.sounds(BlockSoundGroup.AMETHYST_BLOCK),
-        {HexlinkEntities.HEX_VORTEX},
-        { w, bp, bs, t -> t.tick(w,bp,bs) },
-        2,
-        VoxelShapes.cuboid(Box.of(Vec3d(.5,.5,.5), 0.8, 1.0, 0.8))
-    ))
-
-    val BIG_TABLET: SpiritContainerBlock<BigTabletBlockEntity> = create( "big_tablet", FacingSpiritContainerBlock(
-        AbstractBlock.Settings.of(Material.STONE).nonOpaque().sounds(BlockSoundGroup.STONE),
-        {HexlinkEntities.BIG_TABLET},
-        { w, bp, bs, t -> t.tick(w,bp,bs) },
-        1,
-        VoxelShapes.cuboid(Box.of(Vec3d(.5,.5,.5), 0.75, 1.0, 0.25))
-    ))
 }

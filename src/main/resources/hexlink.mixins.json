@@ -1,13 +1,14 @@
 {
   "required": true,
   "package": "jempasam.hexlink.mixin",
-  "compatibilityLevel": "JAVA_17",
+  "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "LootManagerMixin",
-    "MsgShiftScrollSynMixin",
+    "MsgShiftScrollSynMixin"
+  ],
+  "client": [
     "ShiftScrollListenerMixin"
   ],
   "injectors": {
     "defaultRequire": 1
-	}
+  }
 }

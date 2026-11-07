@@ -3,8 +3,8 @@ package jempasam.hexlink.spirit.bag
 import at.petrak.hexcasting.api.utils.putCompound
 import jempasam.hexlink.spirit.Spirit
 import jempasam.hexlink.utils.NbtHelper
-import net.minecraft.nbt.NbtCompound
-import net.minecraft.nbt.NbtList
+import net.minecraft.nbt.CompoundTag
+import net.minecraft.nbt.ListTag
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.random.Random
@@ -161,11 +161,11 @@ class SpiritBag : Collection<Spirit>{
 
     fun random(): Spirit = content[Random.nextInt(content.size)].spirit
 
-    fun readNBT(nbt: NbtList){
+    fun readNBT(nbt: ListTag){
         content.clear()
         totalCount=0;
         nbt.forEach { cpd ->
-            if(cpd is NbtCompound){
+            if(cpd is CompoundTag){
                 val count= max(cpd.getInt("count"),1)
                 val spirit= NbtHelper.readSpirit(cpd.getCompound("spirit"))
                 if(spirit!=null){
@@ -176,10 +176,10 @@ class SpiritBag : Collection<Spirit>{
         }
     }
 
-    fun writeNBT(): NbtList{
-        return NbtList().apply {
+    fun writeNBT(): ListTag{
+        return ListTag().apply {
             content.forEach { stack ->
-                add(NbtCompound().apply {
+                add(CompoundTag().apply {
                     putInt("count",stack.count)
                     putCompound("spirit", NbtHelper.writeSpirit(stack.spirit))
                 })

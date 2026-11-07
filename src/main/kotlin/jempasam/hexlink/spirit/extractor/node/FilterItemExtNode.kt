@@ -1,9 +1,11 @@
 package jempasam.hexlink.spirit.extractor.node
 
 import com.google.gson.JsonObject
+import com.google.gson.JsonParseException
 import jempasam.hexlink.spirit.StackHelper
-import net.minecraft.predicate.item.ItemPredicate
-import net.minecraft.util.JsonHelper
+import jempasam.hexlink.utils.HexlinkRegistryAccess
+import net.minecraft.advancements.critereon.ItemPredicate
+import net.minecraft.util.GsonHelper
 
 class FilterItemExtNode(val predicate: ItemPredicate, val not: Boolean) : ExtractionNode {
     override fun filter(source: ExtractionNode.Source): ExtractionNode.Source {
@@ -13,8 +15,10 @@ class FilterItemExtNode(val predicate: ItemPredicate, val not: Boolean) : Extrac
 
     object Parser: ExtractionNode.Parser<FilterItemExtNode> {
         override fun parse(obj: JsonObject): FilterItemExtNode = FilterItemExtNode(
-            ItemPredicate.fromJson(obj),
-            JsonHelper.getBoolean(obj,"not", false)
+            // Item tags are holder sets, which only decode through registry-aware ops.
+            ItemPredicate.CODEC.parse(HexlinkRegistryAccess.jsonOps(), obj)
+                .getOrThrow { JsonParseException("Invalid item predicate: $it") },
+            GsonHelper.getAsBoolean(obj,"not", false)
         )
     }
 }

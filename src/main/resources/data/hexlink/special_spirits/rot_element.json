@@ -1,5 +1,11 @@
 {
-  "all": {"type": "hexlink:potion", "value": "minecraft:hunger"},
-  "name": {"text": "Rot"},
+  "all": {
+    "type": "hexlink:potion",
+    "value": "minecraft:hunger"
+  },
+  "name": {
+    "translate": "hexlink.special_spirit.rot_element",
+    "fallback": "Rot"
+  },
   "color": 8087808
 }

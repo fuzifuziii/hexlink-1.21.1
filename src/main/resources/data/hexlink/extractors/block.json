@@ -1,5 +1,15 @@
 {
-  "name": "Block",
-  "color": [9267278, 9269849, 9267536, 9263680, 9267536, 9269849],
+  "name": {
+    "translate": "hexlink.extractor.block",
+    "fallback": "Block"
+  },
+  "color": [
+    9267278,
+    9269849,
+    9267536,
+    9263680,
+    9267536,
+    9269849
+  ],
   "nodes": "hexlink:block"
 }

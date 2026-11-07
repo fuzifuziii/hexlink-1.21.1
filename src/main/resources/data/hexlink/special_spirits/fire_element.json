@@ -1,5 +1,11 @@
 {
-  "all": {"type": "hexlink:block", "value": "minecraft:fire"},
-  "name": {"text": "Fire Element"},
+  "all": {
+    "type": "hexlink:block",
+    "value": "minecraft:fire"
+  },
+  "name": {
+    "translate": "hexlink.special_spirit.fire_element",
+    "fallback": "Fire Element"
+  },
   "color": 16749568
 }

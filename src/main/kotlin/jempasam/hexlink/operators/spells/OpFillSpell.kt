@@ -1,40 +1,45 @@
 package jempasam.hexlink.operators.spells
 
-import at.petrak.hexcasting.api.spell.*
-import at.petrak.hexcasting.api.spell.casting.CastingContext
-import at.petrak.hexcasting.api.spell.iota.Iota
-import at.petrak.hexcasting.api.spell.mishaps.MishapBadEntity
-import at.petrak.hexcasting.api.spell.mishaps.MishapOthersName
+import at.petrak.hexcasting.api.casting.ParticleSpray
+import at.petrak.hexcasting.api.casting.RenderedSpell
+import at.petrak.hexcasting.api.casting.castables.SpellAction
+import at.petrak.hexcasting.api.casting.eval.CastingEnvironment
+import at.petrak.hexcasting.api.casting.iota.Iota
+import at.petrak.hexcasting.api.casting.mishaps.MishapBadEntity
+import at.petrak.hexcasting.api.casting.mishaps.MishapOthersName
+import at.petrak.hexcasting.api.casting.getEntity
+import at.petrak.hexcasting.api.casting.getList
 import jempasam.hexlink.item.functionnality.SpellHolderItem
 import jempasam.hexlink.spirit.StackHelper
-import net.minecraft.text.Text
+import net.minecraft.network.chat.Component
 
 class OpFillSpell(val cost: Int) : SpellAction {
     override val argc: Int get() = 2
 
-    override fun execute(args: List<Iota>, ctx: CastingContext): Triple<RenderedSpell, Int, List<ParticleSpray>> {
-        val entity=args.getEntity(0, argc)
-        val spell=args.getList(1,argc).toList()
+    override fun execute(args: List<Iota>, env: CastingEnvironment): SpellAction.Result {
+        val entity = args.getEntity(env.world, 0, argc)
+        val spell = args.getList(1, argc).toList()
 
-        val world_stack=StackHelper.stack(ctx.caster,entity)
+        val worldStack = StackHelper.stack(env.castingEntity as? net.minecraft.world.entity.player.Player, entity)
 
-        if(world_stack==null || world_stack.stack.item !is SpellHolderItem){
-            throw MishapBadEntity(entity, Text.translatable("hexlink.mishap.spell_holder"))
+        if (worldStack == null || worldStack.stack.item !is SpellHolderItem) {
+            throw MishapBadEntity(entity, Component.translatable("hexlink.mishap.spell_holder"))
         }
 
-        MishapOthersName.getTrueNameFromArgs(spell,ctx.caster)?.let { throw MishapOthersName(it) }
+        MishapOthersName.getTrueNameMishapFromArgs(env.world, spell, env.castingEntity as? net.minecraft.world.entity.player.Player)
+            ?.let { throw it }
 
-        return Triple(
-                Spell(world_stack,spell),
-                cost,
-                listOf(ParticleSpray.burst(entity.pos, 0.5))
+        return SpellAction.Result(
+            Spell(worldStack, spell),
+            cost.toLong(),
+            listOf(ParticleSpray.burst(entity.position(), 0.5, 1))
         )
     }
 
-    class Spell(val worldStack: StackHelper.WorldStack, val spell: List<Iota>): RenderedSpell{
-        override fun cast(ctx: CastingContext) {
-            val item=worldStack.stack.item as SpellHolderItem
-            item.setSpell(worldStack.stack,spell)
+    class Spell(val worldStack: StackHelper.WorldStack, val spell: List<Iota>) : RenderedSpell {
+        override fun cast(env: CastingEnvironment) {
+            val item = worldStack.stack.item as SpellHolderItem
+            item.setSpell(worldStack.stack, spell)
             worldStack.update()
         }
     }

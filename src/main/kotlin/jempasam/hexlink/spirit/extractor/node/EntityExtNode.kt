@@ -3,16 +3,16 @@ package jempasam.hexlink.spirit.extractor.node
 import com.google.gson.JsonObject
 import com.mojang.serialization.Codec
 import jempasam.hexlink.spirit.EntitySpirit
-import net.minecraft.entity.Entity
-import net.minecraft.entity.LivingEntity
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.LivingEntity
 
 object EntityExtNode : ExtractionNode {
     override fun filter(source: ExtractionNode.Source): ExtractionNode.Source {
         val target=source.entity
-        if( target.type.isSummonable
+        if( target.type.canSummon()
             && (target !is LivingEntity || target.health<=4.0f)
             && !target.isRemoved
-            && target.type.isSaveable)
+            && target.type.canSerialize())
         {
             return source.with {
                 spirit=EntitySpirit(target.type)

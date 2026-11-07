@@ -1,24 +1,28 @@
 package jempasam.hexlink.spirit.extractor.node
 
 import com.google.gson.JsonObject
-import net.minecraft.predicate.entity.EntityPredicate
-import net.minecraft.server.world.ServerWorld
-import net.minecraft.util.JsonHelper
+import com.google.gson.JsonParseException
+import jempasam.hexlink.utils.HexlinkRegistryAccess
+import net.minecraft.advancements.critereon.EntityPredicate
+import net.minecraft.server.level.ServerLevel
+import net.minecraft.util.GsonHelper
 
 class FilterEntityExtNode(val predicate: EntityPredicate, val not: Boolean) : ExtractionNode {
     override fun filter(source: ExtractionNode.Source): ExtractionNode.Source {
         val success = if(source.caster!=null){
-            predicate.test(source.caster,source.entity) != not
+            predicate.matches(source.caster,source.entity) != not
         } else{
-            predicate.test(source.entity.world as ServerWorld, source.entity.pos,source.entity) != not
+            predicate.matches(source.entity.level() as ServerLevel, source.entity.position(), source.entity) != not
         }
         return if(success) source else source.with{count=0}
     }
 
     object Parser: ExtractionNode.Parser<FilterEntityExtNode> {
         override fun parse(obj: JsonObject): FilterEntityExtNode = FilterEntityExtNode(
-            EntityPredicate.fromJson(obj),
-            JsonHelper.getBoolean(obj,"not", false)
+            // Entity type tags are holder sets, which only decode through registry-aware ops.
+            EntityPredicate.CODEC.parse(HexlinkRegistryAccess.jsonOps(), obj)
+                .getOrThrow { JsonParseException("Invalid entity predicate: $it") },
+            GsonHelper.getAsBoolean(obj,"not", false)
         )
     }
 }

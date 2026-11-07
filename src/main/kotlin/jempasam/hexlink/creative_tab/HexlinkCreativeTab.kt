@@ -4,68 +4,64 @@ import jempasam.hexlink.HexlinkMod
 import jempasam.hexlink.HexlinkRegistry
 import jempasam.hexlink.item.HexlinkItems
 import jempasam.hexlink.spirit.SpecialSpirit
-import net.fabricmc.fabric.api.client.itemgroup.FabricItemGroupBuilder
-import net.minecraft.item.ItemGroup
-import net.minecraft.util.Identifier
+import net.minecraft.core.Registry
+import net.minecraft.network.chat.Component
+import net.minecraft.resources.ResourceLocation
+import net.minecraft.world.item.CreativeModeTab
+import net.minecraft.world.item.ItemStack
 
 object HexlinkCreativeTab {
 
-    val MAIN_TAB: ItemGroup = FabricItemGroupBuilder.create(Identifier(HexlinkMod.MODID,"hexlink"))
-            .icon { HexlinkItems.MediumBag.defaultStack }
-            .appendItems{ list, group ->
-                val spirits=HexlinkRegistry.SPECIAL_SPIRIT.entrySet.map { it.value }.toList()
+    private val TAB_KEY = ResourceLocation.fromNamespaceAndPath(HexlinkMod.MODID, "hexlink")
 
-                list.add(HexlinkItems.BigTablet.defaultStack)
-                list.add(HexlinkItems.BigBag.defaultStack)
-                list.add(HexlinkItems.MediumBag.defaultStack)
-                list.add(HexlinkItems.SmallBag.defaultStack)
-                list.add(HexlinkItems.Tablet.defaultStack)
+    val MAIN_TAB: CreativeModeTab = CreativeModeTab.builder()
+        .title(Component.translatable("itemGroup.${HexlinkMod.MODID}.hexlink"))
+        .icon { HexlinkItems.MediumBag.defaultInstance }
+        .displayItems { _, output -> fill(output) }
+        .build()
 
-                list.add(HexlinkItems.PhilosophicalCrystal.let {
-                    val stack=it.defaultStack
-                    it.getSpirits(stack).apply {
-                        add(SpecialSpirit(spirits.random()))
-                        add(SpecialSpirit(spirits.random()))
-                    }
-                    stack
-                })
+    /** Called from the NeoForge `RegisterEvent` for `Registries.CREATIVE_MODE_TAB`. */
+    fun register(registry: Registry<CreativeModeTab>) {
+        Registry.register(registry, TAB_KEY, MAIN_TAB)
+    }
 
-                list.add(HexlinkItems.HauntedCrystal.let {
-                    val stack=it.defaultStack
-                    it.getSpirits(stack).apply {
-                        add(SpecialSpirit(spirits.random()))
-                        add(SpecialSpirit(spirits.random()))
-                    }
-                    stack
-                })
+    private fun fill(output: CreativeModeTab.Output) {
+        val spirits = HexlinkRegistry.SPECIAL_SPIRIT.entrySet.map { it.value }.toList()
+        output.accept(HexlinkItems.BigBag.defaultInstance)
+        output.accept(HexlinkItems.MediumBag.defaultInstance)
+        output.accept(HexlinkItems.SmallBag.defaultInstance)
+        output.accept(HexlinkItems.Tablet.defaultInstance)
 
-                list.add(HexlinkItems.TabletStaff.defaultStack)
-                list.add(HexlinkItems.SpiritStaff.defaultStack)
-                list.add(HexlinkItems.BigTabletStaff.defaultStack)
-                list.add(HexlinkItems.PureMediaStaff.defaultStack)
-
-                list.add(HexlinkItems.Vortex.defaultStack)
-
-                for(i in 1..4){
-                    val pigment=HexlinkItems.MixedPigment.defaultStack
-                    HexlinkItems.MixedPigment.setColor1(pigment, (Math.random()*0xFFFFFF).toInt())
-                    HexlinkItems.MixedPigment.setColor2(pigment, (Math.random()*0xFFFFFF).toInt())
-                    list.add(pigment)
+        if (spirits.isNotEmpty()) {
+            output.accept(HexlinkItems.PhilosophicalCrystal.let {
+                val stack = it.defaultInstance
+                it.editSpirits(stack) { list ->
+                    list.add(SpecialSpirit(spirits.random()))
+                    list.add(SpecialSpirit(spirits.random()))
                 }
+                stack
+            })
 
-                for(extractor in HexlinkRegistry.EXTRACTOR.entrySet){
-                    val stack=HexlinkItems.Crystal.defaultStack
-                    HexlinkItems.Crystal.setExtractor(stack, extractor.value)
-                    list.add(stack)
+            output.accept(HexlinkItems.HauntedCrystal.let {
+                val stack = it.defaultInstance
+                it.editSpirits(stack) { list ->
+                    list.add(SpecialSpirit(spirits.random()))
+                    list.add(SpecialSpirit(spirits.random()))
                 }
+                stack
+            })
+        }
 
-                for(type in HexlinkRegistry.SPECIAL_SPIRIT.entrySet){
-                    val stack=HexlinkItems.Spirit.defaultStack
-                    HexlinkItems.Spirit.setSpirit(stack, SpecialSpirit(type.value))
-                    list.add(stack)
-                }
+        for (extractor in HexlinkRegistry.EXTRACTOR.entrySet) {
+            val stack = HexlinkItems.Crystal.defaultInstance
+            HexlinkItems.Crystal.setExtractor(stack, extractor.value)
+            output.accept(stack)
+        }
 
-            }
-            .build()
-
+        for (type in HexlinkRegistry.SPECIAL_SPIRIT.entrySet) {
+            val stack = HexlinkItems.Spirit.defaultInstance
+            HexlinkItems.Spirit.setSpirit(stack, SpecialSpirit(type.value))
+            output.accept(stack)
+        }
+    }
 }

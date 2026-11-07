@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "#": {
+      "item": "minecraft:leather"
+    },
+    "I": {
+      "item": "hexcasting:charged_amethyst"
+    },
+    "H": {
+      "item": "hexlink:tablet"
+    }
+  },
+  "pattern": [
+    " I ",
+    "#H#",
+    "###"
+  ],
+  "result": {
+    "id": "hexlink:small_bag"
+  }
+}

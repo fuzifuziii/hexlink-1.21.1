@@ -1,8 +1,18 @@
 {
-  "name": "Entity",
-  "color": [16711680, 16711795],
+  "name": {
+    "translate": "hexlink.extractor.entity",
+    "fallback": "Entity"
+  },
+  "color": [
+    16711680,
+    16711795
+  ],
   "nodes": [
-    {"node": "hexlink:entity_predicate", "type":"#hexlink:not_extractable", "not":true},
+    {
+      "node": "hexlink:entity_predicate",
+      "type": "#hexlink:not_extractable",
+      "not": true
+    },
     "hexlink:entity"
   ]
 }

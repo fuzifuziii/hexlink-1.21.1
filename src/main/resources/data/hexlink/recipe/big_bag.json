@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "#": {
+      "tag": "minecraft:wool"
+    },
+    "I": {
+      "item": "minecraft:chorus_fruit"
+    },
+    "H": {
+      "item": "hexlink:medium_bag"
+    }
+  },
+  "pattern": [
+    " I ",
+    "#H#",
+    "###"
+  ],
+  "result": {
+    "id": "hexlink:big_bag"
+  }
+}

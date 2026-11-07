@@ -1,5 +1,11 @@
 {
-  "all": {"type": "hexlink:potion", "value": "minecraft:blindness"},
-  "name": {"text": "Dark Element"},
+  "all": {
+    "type": "hexlink:potion",
+    "value": "minecraft:blindness"
+  },
+  "name": {
+    "translate": "hexlink.special_spirit.dark_element",
+    "fallback": "Dark Element"
+  },
   "color": 4667196
 }

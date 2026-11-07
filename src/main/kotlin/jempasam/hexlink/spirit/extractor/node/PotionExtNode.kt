@@ -4,10 +4,9 @@ import com.google.gson.JsonObject
 import com.mojang.serialization.Codec
 import jempasam.hexlink.spirit.PotionSpirit
 import jempasam.hexlink.spirit.StackHelper
-import net.minecraft.item.Items
-import net.minecraft.nbt.NbtInt
-import net.minecraft.potion.PotionUtil
-import net.minecraft.potion.Potions
+import net.minecraft.world.item.Items
+import net.minecraft.core.component.DataComponents
+import net.minecraft.world.item.alchemy.PotionContents
 import kotlin.math.max
 
 object PotionExtNode : ExtractionNode {
@@ -20,7 +19,8 @@ object PotionExtNode : ExtractionNode {
 
         if(!POTION_ITEMS.contains(stack.item)) return source
 
-        val effects= PotionUtil.getPotionEffects(stack)
+        val contents = stack.getOrDefault(DataComponents.POTION_CONTENTS, PotionContents.EMPTY)
+        val effects = contents.allEffects.toList()
         if(effects.isEmpty())return source
 
         return source.with {
@@ -30,17 +30,17 @@ object PotionExtNode : ExtractionNode {
                 prev(it)
                 if (effects.size == 1) worldStack.killer()
                 else {
-                    if (PotionUtil.getPotion(stack) != Potions.EMPTY) {
-                        stack.setCustomName(stack.name)
-                        stack.orCreateNbt.put(PotionUtil.CUSTOM_POTION_COLOR_KEY, NbtInt.of(PotionUtil.getColor(stack)))
-                        PotionUtil.setPotion(stack, Potions.EMPTY)
-                    }
-                    effects.removeAt(0)
-                    PotionUtil.setCustomPotionEffects(stack, effects)
+                    val remaining = effects.drop(1)
+                    val newContents = PotionContents(
+                        contents.potion(),
+                        contents.customColor(),
+                        remaining
+                    )
+                    stack.set(DataComponents.POTION_CONTENTS, newContents)
                     worldStack.update()
                 }
             }
-            spirit= PotionSpirit(effects[0].effectType)
+            spirit= PotionSpirit(effects[0].effect)
         }
     }
 

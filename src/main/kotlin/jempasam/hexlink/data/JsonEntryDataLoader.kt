@@ -4,33 +4,37 @@ import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import jempasam.hexlink.HexlinkMod
-import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener
-import net.minecraft.resource.JsonDataLoader
-import net.minecraft.resource.ResourceManager
-import net.minecraft.util.Identifier
-import net.minecraft.util.profiler.Profiler
-import net.minecraft.util.registry.DynamicRegistryManager
+import net.minecraft.resources.ResourceLocation
+import net.minecraft.server.packs.resources.ResourceManager
+import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener
+import net.minecraft.util.profiling.ProfilerFiller
 
-abstract class JsonEntryDataLoader(private val name: String): JsonDataLoader(Gson(),name), IdentifiableResourceReloadListener {
-    override fun apply(prepared: MutableMap<Identifier, JsonElement>, manager: ResourceManager, profiler: Profiler) {
+/**
+ * Base class for Hexlink's data-driven content (spirits, extractors).
+ *
+ * Each subclass reads one directory of JSON files under `data/<namespace>/<name>/`.
+ */
+abstract class JsonEntryDataLoader(private val name: String) : SimpleJsonResourceReloadListener(Gson(), name) {
+
+    /** Stable id used to order this listener against others. */
+    val loaderId: ResourceLocation = ResourceLocation.fromNamespaceAndPath(HexlinkMod.MODID, "${name}_loader")
+
+    override fun apply(prepared: Map<ResourceLocation, JsonElement>, manager: ResourceManager, profiler: ProfilerFiller) {
         before()
-        DynamicRegistryManager.createAndLoad()
-        for(entry in prepared){
-            try{
-                val jsonObject=entry.value.asJsonObject
-                apply(entry.key,jsonObject)
-            }catch (e: Exception){
+        for (entry in prepared) {
+            try {
+                val jsonObject = entry.value.asJsonObject
+                apply(entry.key, jsonObject)
+            } catch (e: Exception) {
                 HexlinkMod.logger.error("In $name \"${entry.key}\", ${e.message}")
             }
         }
         after()
     }
 
-    protected abstract fun apply(id: Identifier, obj: JsonObject)
+    protected abstract fun apply(id: ResourceLocation, obj: JsonObject)
 
-    protected open fun after(){ }
+    protected open fun after() {}
 
-    protected open fun before(){ }
-
-    override fun getFabricId(): Identifier = Identifier(HexlinkMod.MODID,"${name}_loader")
+    protected open fun before() {}
 }

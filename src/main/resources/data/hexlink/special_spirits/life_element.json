@@ -1,6 +1,15 @@
 {
-  "at": {"type": "hexlink:block", "value": "minecraft:oak_leaves"},
-  "in": {"type": "hexlink:potion", "value": "minecraft:regeneration"},
-  "name": {"text": "Life Element"},
+  "at": {
+    "type": "hexlink:block",
+    "value": "minecraft:oak_leaves"
+  },
+  "in": {
+    "type": "hexlink:potion",
+    "value": "minecraft:regeneration"
+  },
+  "name": {
+    "translate": "hexlink.special_spirit.life_element",
+    "fallback": "Life Element"
+  },
   "color": 11010000
 }

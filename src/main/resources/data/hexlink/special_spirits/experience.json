@@ -8,6 +8,9 @@
       "manifestAtCost": 10
     }
   },
-  "name": {"text": "Experience"},
+  "name": {
+    "translate": "hexlink.special_spirit.experience",
+    "fallback": "Experience"
+  },
   "color": 13631232
 }

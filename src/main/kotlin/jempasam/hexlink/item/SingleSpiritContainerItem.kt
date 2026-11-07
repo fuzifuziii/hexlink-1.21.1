@@ -8,24 +8,26 @@ import jempasam.hexlink.spirit.Spirit
 import jempasam.hexlink.spirit.inout.SpiritSource
 import jempasam.hexlink.spirit.inout.SpiritTarget
 import jempasam.hexlink.utils.NbtHelper
-import net.minecraft.client.item.TooltipContext
-import net.minecraft.item.Item
-import net.minecraft.item.ItemGroup
-import net.minecraft.item.ItemStack
-import net.minecraft.text.Style
-import net.minecraft.text.Text
-import net.minecraft.util.collection.DefaultedList
-import net.minecraft.world.World
+import jempasam.hexlink.utils.nbt
+import jempasam.hexlink.utils.readNbt
+import jempasam.hexlink.utils.editNbt
+import net.minecraft.world.item.Item.TooltipContext
+import net.minecraft.world.item.Item
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.TooltipFlag
+import net.minecraft.network.chat.Style
+import net.minecraft.network.chat.Component
+import net.minecraft.world.level.Level
 import kotlin.math.min
 
-class SingleSpiritContainerItem(settings: Settings): Item(settings), ItemSpiritSource, ItemSpiritTarget {
+class SingleSpiritContainerItem(settings: Item.Properties): Item(settings), ItemSpiritSource, ItemSpiritTarget {
     fun setSpirit(stack: ItemStack, spirit: Spirit?){
-        if(spirit==null)stack.nbt?.remove("spirit")
-        else stack.orCreateNbt.put("spirit",NbtHelper.writeSpirit(spirit))
+        if(spirit==null) stack.editNbt { it.remove("spirit") }
+        else stack.editNbt { it.put("spirit", NbtHelper.writeSpirit(spirit)) }
     }
 
     fun getSpirit(stack: ItemStack): Spirit?{
-        return stack.nbt?.getCompound("spirit")?.let { NbtHelper.readSpirit(it) }
+        return stack.readNbt { it.getCompound("spirit") }?.let { NbtHelper.readSpirit(it) }
     }
 
     override fun getSpiritSource(stack: ItemStack): SpiritSource {
@@ -47,22 +49,13 @@ class SingleSpiritContainerItem(settings: Settings): Item(settings), ItemSpiritS
         }
     }
 
-    override fun getName(stack: ItemStack): Text
-            = getSpirit(stack) ?.getName() ?.let{ Text.translatable(getTranslationKey(stack), it)}
-            ?: Text.translatable(getTranslationKey(stack)+".none")
+    override fun getName(stack: ItemStack): Component
+            = getSpirit(stack) ?.getName() ?.let{ Component.translatable(getDescriptionId(stack), it)}
+            ?: Component.translatable(getDescriptionId(stack)+".none")
 
-    override fun appendTooltip(stack: ItemStack, world: World?, tooltip: MutableList<Text>, context: TooltipContext) {
+    override fun appendHoverText(stack: ItemStack, context: TooltipContext, tooltip: MutableList<Component>, flag: TooltipFlag) {
         val spirit=getSpirit(stack) ?: return
         tooltip.add(spirit.getName().copy().setStyle(Style.EMPTY.withColor(spirit.getColor()).withItalic(true)))
     }
 
-    override fun appendStacks(group: ItemGroup, stacks: DefaultedList<ItemStack>) {
-        if(isIn(group)){
-            for(specialType in HexlinkRegistry.SPECIAL_SPIRIT){
-                val stack=defaultStack
-                setSpirit(stack,SpecialSpirit(specialType))
-                stacks.add(stack)
-            }
-        }
-    }
 }

@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "#": {
+      "item": "minecraft:phantom_membrane"
+    },
+    "I": {
+      "item": "minecraft:diamond"
+    },
+    "H": {
+      "item": "hexlink:small_bag"
+    }
+  },
+  "pattern": [
+    " I ",
+    "#H#",
+    "###"
+  ],
+  "result": {
+    "id": "hexlink:medium_bag"
+  }
+}

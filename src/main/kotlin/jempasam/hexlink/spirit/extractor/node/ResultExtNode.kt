@@ -6,8 +6,8 @@ import com.mojang.serialization.codecs.RecordCodecBuilder
 import jempasam.hexlink.spirit.Spirit
 import jempasam.hexlink.utils.NbtHelper
 import jempasam.hexlink.utils.asNBT
-import net.minecraft.util.JsonHelper
-import net.minecraft.util.dynamic.Codecs
+import net.minecraft.util.GsonHelper
+import net.minecraft.util.ExtraCodecs
 import kotlin.math.ceil
 
 class ResultExtNode(val base: Int, val multiplier: Float, val newSpirit: Spirit?) : ExtractionNode {
@@ -23,20 +23,19 @@ class ResultExtNode(val base: Int, val multiplier: Float, val newSpirit: Spirit?
     object Parser: ExtractionNode.Parser<ResultExtNode> {
         override fun parse(obj: JsonObject): ResultExtNode {
             return ResultExtNode(
-                JsonHelper.getInt(obj,"base", 0),
-                JsonHelper.getFloat(obj,"multiplier", 1.0f),
+                GsonHelper.getAsInt(obj,"base", 0),
+                GsonHelper.getAsFloat(obj,"multiplier", 1.0f),
                 obj.get("spirit") ?.asJsonObject ?.let { NbtHelper.readSpirit(it.asNBT()) }
             )
         }
     }
 
     companion object{
-        val CODEC= RecordCodecBuilder.create<CostExtNode> { inst ->
+        val CODEC= RecordCodecBuilder.create<ResultExtNode> { inst ->
             inst.group(
-                Codecs.NONNEGATIVE_INT .optionalFieldOf("base",0) .forGetter(CostExtNode::base),
-                Codec.FLOAT .optionalFieldOf("multiplier",1.0f) .forGetter(CostExtNode::multiplier),
-
-            ).apply(inst, ::CostExtNode)
+                ExtraCodecs.NON_NEGATIVE_INT .optionalFieldOf("base",0) .forGetter(ResultExtNode::base),
+                Codec.FLOAT .optionalFieldOf("multiplier",1.0f) .forGetter(ResultExtNode::multiplier)
+            ).apply(inst) { base, multiplier -> ResultExtNode(base, multiplier, null) }
         }
     }
 }

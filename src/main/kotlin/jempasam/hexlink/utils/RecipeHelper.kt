@@ -1,77 +1,76 @@
 package jempasam.hexlink.utils
 
-import net.minecraft.entity.player.PlayerEntity
-import net.minecraft.inventory.CraftingInventory
-import net.minecraft.item.ItemStack
-import net.minecraft.recipe.Recipe
-import net.minecraft.recipe.RecipeType
-import net.minecraft.recipe.ShapedRecipe
-import net.minecraft.screen.ScreenHandler
-import net.minecraft.world.World
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.crafting.CraftingInput
+import net.minecraft.world.item.crafting.CraftingRecipe
+import net.minecraft.world.item.crafting.Recipe
+import net.minecraft.world.item.crafting.RecipeType
+import net.minecraft.world.item.crafting.ShapedRecipe
+import net.minecraft.world.level.Level
 
 object RecipeHelper {
 
-    private val NONE_HANDLER=object:ScreenHandler(null,-1){
-        override fun transferSlot(player: PlayerEntity?, index: Int): ItemStack = ItemStack.EMPTY
-        override fun canUse(player: PlayerEntity?): Boolean = true
-        override fun isValid(slot: Int): Boolean = true
-    }
+    /**
+     * Find every recipe of [type] whose ingredients match [input] in order.
+     *
+     * 1.21 exposes recipes through [net.minecraft.world.item.crafting.RecipeHolder] and
+     * matches against a [CraftingInput] rather than a container.
+     */
+    fun <T : Recipe<CraftingInput>> findAllSimpleMatches(world: Level, type: RecipeType<T>, input: List<ItemStack>): List<T> {
+        val recipeManager = world.server?.recipeManager ?: return listOf()
+        val matchedRecipes = mutableListOf<T>()
+        for (holder in recipeManager.getAllRecipesFor(type)) {
+            val recipe = holder.value()
+            val ingredients = recipe.ingredients
+            var stackPlace = 0
 
-    fun <T: Recipe<CraftingInventory>>findAllSimpleMatches(world: World, type: RecipeType<T>, input: List<ItemStack>): List<T>{
-        val recipe_manager=world.server?.recipeManager
-        if(recipe_manager!=null){
-            val recipes=recipe_manager.listAllOfType(type)
-            val matchedRecipes= mutableListOf<T>()
-            for(recipe in recipes){
-                // Check Shapeless Matches
-                val ingredients=recipe.ingredients
-                var stackPlace=0
-
-                for(ingre_place in input.indices){
-                    val ingredient= ingredients[ingre_place]
-                    if(ingredient.isEmpty)continue
-                    if(ingredient.test(input[stackPlace])){
-                        stackPlace++
-                        if(stackPlace==input.size){
-                            matchedRecipes.add(recipe)
-                        }
+            for (ingrePlace in input.indices) {
+                if (ingrePlace >= ingredients.size) break
+                val ingredient = ingredients[ingrePlace]
+                if (ingredient.isEmpty) continue
+                if (ingredient.test(input[stackPlace])) {
+                    stackPlace++
+                    if (stackPlace == input.size) {
+                        matchedRecipes.add(recipe)
+                        break
                     }
-                    else break
-                }
+                } else break
             }
-            return matchedRecipes
         }
-        else return listOf()
+        return matchedRecipes
     }
 
-
-    fun <T: Recipe<CraftingInventory>>craft(world: World, type: RecipeType<T>, input: List<ItemStack>): Pair<ItemStack,Int>?{
+    /** Craft [input] with the best-matching recipe of [type], if any. */
+    fun <T : Recipe<CraftingInput>> craft(world: Level, type: RecipeType<T>, input: List<ItemStack>): Pair<ItemStack, Int>? {
         // Sort matches, test with most items first
-        var matches= findAllSimpleMatches(world, type, input).map{
-            var ingredientCount=0
-            for(ing in it.ingredients)if(!ing.isEmpty)ingredientCount++
+        var matches = findAllSimpleMatches(world, type, input).map {
+            var ingredientCount = 0
+            for (ing in it.ingredients) if (!ing.isEmpty) ingredientCount++
             it to ingredientCount
         }
-        matches=matches.sortedByDescending { it.second }
+        matches = matches.sortedByDescending { it.second }
 
         // Test matches
-        for(match in matches){
-            val recipe=match.first
-            val ingredients=recipe.ingredients
-            val dimension = if(recipe is ShapedRecipe) recipe.width to recipe.height else recipe.ingredients.size to 1
-            val craft=CraftingInventory(NONE_HANDLER, dimension.first, dimension.second)
+        for (match in matches) {
+            val recipe = match.first
+            val ingredients = recipe.ingredients
+            val dimension = if (recipe is ShapedRecipe) recipe.width to recipe.height else ingredients.size to 1
 
             // Fill inventory
-            var listi=0
-            for(i in 0 until ingredients.size){
-                val ingredient= ingredients[i]
-                if(listi<input.size && !ingredient.isEmpty){
-                    craft.setStack(i,input[listi])
+            val stacks = MutableList(dimension.first * dimension.second) { ItemStack.EMPTY }
+            var listi = 0
+            for (i in 0 until minOf(ingredients.size, stacks.size)) {
+                val ingredient = ingredients[i]
+                if (listi < input.size && !ingredient.isEmpty) {
+                    stacks[i] = input[listi]
                     listi++
                 }
-                else craft.setStack(i,ItemStack.EMPTY)
             }
-            if(recipe.matches(craft,world))return recipe.craft(craft) to ingredients.size
+            val craft = CraftingInput.of(dimension.first, dimension.second, stacks)
+            if (recipe.matches(craft, world)) {
+                val registries = world.registryAccess()
+                return recipe.assemble(craft, registries) to ingredients.size
+            }
         }
         return null
     }

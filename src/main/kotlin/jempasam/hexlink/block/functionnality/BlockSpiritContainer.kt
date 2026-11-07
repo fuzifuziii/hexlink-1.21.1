@@ -1,10 +1,10 @@
 package jempasam.hexlink.block.functionnality
 
 import jempasam.hexlink.spirit.Spirit
-import net.minecraft.util.math.BlockPos
-import net.minecraft.world.World
+import net.minecraft.core.BlockPos
+import net.minecraft.world.level.Level
 
 interface BlockSpiritContainer {
-    fun getSpiritContent(slot: Int, world: World, pos: BlockPos): Sequence<Spirit>
+    fun getSpiritContent(slot: Int, world: Level, pos: BlockPos): Sequence<Spirit>
     fun getSlotCount(): Int
 }

@@ -3,8 +3,8 @@ package jempasam.hexlink.spirit.extractor.node
 import com.google.gson.JsonObject
 import com.mojang.serialization.Codec
 import com.mojang.serialization.codecs.RecordCodecBuilder
-import net.minecraft.util.JsonHelper
-import net.minecraft.util.dynamic.Codecs
+import net.minecraft.util.GsonHelper
+import net.minecraft.util.ExtraCodecs
 import kotlin.math.ceil
 
 class CostExtNode(val base: Int, val multiplier: Float) : ExtractionNode {
@@ -18,8 +18,8 @@ class CostExtNode(val base: Int, val multiplier: Float) : ExtractionNode {
     object Parser: ExtractionNode.Parser<CostExtNode> {
         override fun parse(obj: JsonObject): CostExtNode {
             return CostExtNode(
-                JsonHelper.getInt(obj,"base", 0),
-                JsonHelper.getFloat(obj,"multiplier", 1.0f)
+                GsonHelper.getAsInt(obj,"base", 0),
+                GsonHelper.getAsFloat(obj,"multiplier", 1.0f)
             )
         }
     }
@@ -27,9 +27,9 @@ class CostExtNode(val base: Int, val multiplier: Float) : ExtractionNode {
     companion object{
         val CODEC= RecordCodecBuilder.create<CostExtNode> { inst ->
             inst.group(
-                Codecs.NONNEGATIVE_INT .fieldOf("base") .forGetter(CostExtNode::base),
+                ExtraCodecs.NON_NEGATIVE_INT .fieldOf("base") .forGetter(CostExtNode::base),
                 Codec.FLOAT.fieldOf("multiplier") .forGetter(CostExtNode::multiplier)
-            ).apply(inst, ::CostExtNode)
+            ).apply(inst) { base, multiplier -> CostExtNode(base, multiplier) }
         }
     }
 }

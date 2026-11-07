@@ -4,7 +4,7 @@ import com.google.gson.JsonObject
 import com.mojang.serialization.Codec
 import jempasam.hexlink.spirit.BlockSpirit
 import jempasam.hexlink.spirit.StackHelper
-import net.minecraft.item.BlockItem
+import net.minecraft.world.item.BlockItem
 import kotlin.math.ceil
 import kotlin.math.max
 

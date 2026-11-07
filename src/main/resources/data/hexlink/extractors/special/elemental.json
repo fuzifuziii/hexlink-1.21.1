@@ -1,24 +1,68 @@
 {
-  "name": "Elemental Symbols",
-  "color": [16749568, 3094527, 48420, 11436116],
+  "name": {
+    "translate": "hexlink.extractor.special.elemental",
+    "fallback": "Elemental Symbols"
+  },
+  "color": [
+    16749568,
+    3094527,
+    48420,
+    11436116
+  ],
   "color_duration": 300,
   "nodes": [
     "ANY",
     [
-      {"node": "hexlink:entity_predicate", "type": "#hexlink:fire_like"},
-      {"node": "hexlink:result", "spirit": {"type": "hexlink:special","value": "hexlink:fire_element"}}
+      {
+        "node": "hexlink:entity_predicate",
+        "type": "#hexlink:fire_like"
+      },
+      {
+        "node": "hexlink:result",
+        "spirit": {
+          "type": "hexlink:special",
+          "value": "hexlink:fire_element"
+        }
+      }
     ],
     [
-      {"node": "hexlink:entity_predicate", "type": "#hexlink:water_like"},
-      {"node": "hexlink:result", "spirit": {"type": "hexlink:special","value": "hexlink:water_element"}}
+      {
+        "node": "hexlink:entity_predicate",
+        "type": "#hexlink:water_like"
+      },
+      {
+        "node": "hexlink:result",
+        "spirit": {
+          "type": "hexlink:special",
+          "value": "hexlink:water_element"
+        }
+      }
     ],
     [
-      {"node": "hexlink:entity_predicate", "type": "#hexlink:earth_like"},
-      {"node": "hexlink:result", "spirit": {"type": "hexlink:special","value": "hexlink:earth_element"}}
+      {
+        "node": "hexlink:entity_predicate",
+        "type": "#hexlink:earth_like"
+      },
+      {
+        "node": "hexlink:result",
+        "spirit": {
+          "type": "hexlink:special",
+          "value": "hexlink:earth_element"
+        }
+      }
     ],
     [
-      {"node": "hexlink:entity_predicate", "type": "#hexlink:plant_like"},
-      {"node": "hexlink:result", "spirit": {"type": "hexlink:special","value": "hexlink:life_element"}}
+      {
+        "node": "hexlink:entity_predicate",
+        "type": "#hexlink:plant_like"
+      },
+      {
+        "node": "hexlink:result",
+        "spirit": {
+          "type": "hexlink:special",
+          "value": "hexlink:life_element"
+        }
+      }
     ]
   ]
 }

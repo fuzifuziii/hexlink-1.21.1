@@ -1,4 +1,4 @@
-package assets.hexlink.config
+package jempasam.hexlink.config
 
 import com.google.gson.JsonObject
 import jempasam.hexlink.config.Config

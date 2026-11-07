@@ -1,14 +1,14 @@
 package jempasam.hexlink.operators.spells
 
-import at.petrak.hexcasting.api.spell.ParticleSpray
-import at.petrak.hexcasting.api.spell.RenderedSpell
-import at.petrak.hexcasting.api.spell.SpellAction
-import at.petrak.hexcasting.api.spell.casting.CastingContext
-import at.petrak.hexcasting.api.spell.iota.Iota
+import at.petrak.hexcasting.api.casting.ParticleSpray
+import at.petrak.hexcasting.api.casting.RenderedSpell
+import at.petrak.hexcasting.api.casting.castables.SpellAction
+import at.petrak.hexcasting.api.casting.eval.CastingEnvironment
+import at.petrak.hexcasting.api.casting.iota.Iota
 import jempasam.hexlink.operators.getSpiritSourceAndPos
 import jempasam.hexlink.spirit.inout.SpiritHelper
 import jempasam.hexlink.spirit.inout.SpiritSource
-import net.minecraft.util.math.Vec3d
+import net.minecraft.world.phys.Vec3
 
 abstract class SpiritSpellAction(val onCaster: Boolean) : SpellAction {
     abstract val argCount: Int
@@ -17,10 +17,12 @@ abstract class SpiritSpellAction(val onCaster: Boolean) : SpellAction {
 
     override val argc: Int get() = if(onCaster) argCount else argCount+1
 
-    override fun execute(args: List<Iota>, ctx: CastingContext): Triple<RenderedSpell, Int, List<ParticleSpray>> {
+    override fun execute(args: List<Iota>, ctx: CastingEnvironment): SpellAction.Result {
         if(onCaster){
-            val source=SpiritHelper.spiritSource(ctx.caster)
-            return execute(source, ctx.caster.pos, args, ctx)
+            val caster = ctx.castingEntity as? net.minecraft.world.entity.player.Player
+                ?: throw at.petrak.hexcasting.api.casting.mishaps.MishapBadCaster()
+            val source=SpiritHelper.spiritSource(caster)
+            return execute(source, caster.position(), args, ctx)
         }
         else{
             val source=args.getSpiritSourceAndPos(ctx,0,argCount+1)
@@ -28,5 +30,5 @@ abstract class SpiritSpellAction(val onCaster: Boolean) : SpellAction {
         }
     }
 
-    abstract fun execute(source: SpiritSource, sourcePos: Vec3d, args: List<Iota>, ctx: CastingContext): Triple<RenderedSpell, Int, List<ParticleSpray>>
+    abstract fun execute(source: SpiritSource, sourcePos: Vec3, args: List<Iota>, ctx: CastingEnvironment): SpellAction.Result
 }

@@ -1,5 +1,11 @@
 {
-  "all": {"type": "hexlink:entity", "value": "minecraft:lightning_bolt"},
-  "name": {"text": "Lightning Element"},
+  "all": {
+    "type": "hexlink:entity",
+    "value": "minecraft:lightning_bolt"
+  },
+  "name": {
+    "translate": "hexlink.special_spirit.lightning_element",
+    "fallback": "Lightning Element"
+  },
   "color": 16776999
 }

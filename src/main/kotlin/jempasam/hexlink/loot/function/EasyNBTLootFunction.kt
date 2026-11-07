@@ -1,39 +1,29 @@
 package jempasam.hexlink.loot.function
 
-import com.google.gson.JsonDeserializationContext
-import com.google.gson.JsonObject
-import com.google.gson.JsonSerializationContext
-import jempasam.hexlink.utils.asJSON
-import jempasam.hexlink.utils.asNBT
-import net.minecraft.item.ItemStack
-import net.minecraft.loot.context.LootContext
-import net.minecraft.loot.function.LootFunction
-import net.minecraft.loot.function.LootFunctionType
-import net.minecraft.nbt.NbtCompound
-import net.minecraft.util.JsonSerializer
+import com.mojang.serialization.MapCodec
+import com.mojang.serialization.codecs.RecordCodecBuilder
+import jempasam.hexlink.utils.setNbt
+import net.minecraft.nbt.CompoundTag
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.level.storage.loot.LootContext
+import net.minecraft.world.level.storage.loot.functions.LootItemFunction
+import net.minecraft.world.level.storage.loot.functions.LootItemFunctionType
 
-class EasyNBTLootFunction(val nbt: NbtCompound) : LootFunction{
+class EasyNBTLootFunction(val nbt: CompoundTag) : LootItemFunction {
     override fun apply(t: ItemStack, u: LootContext): ItemStack {
-        t.nbt=nbt.copy()
+        t.setNbt(nbt.copy())
         return t
     }
 
-    override fun getType(): LootFunctionType = Type
+    override fun getType(): LootItemFunctionType<EasyNBTLootFunction> = Type
 
-    object Type: LootFunctionType(Serializer)
-
-    object Serializer: JsonSerializer<EasyNBTLootFunction>{
-        override fun fromJson(json: JsonObject, context: JsonDeserializationContext): EasyNBTLootFunction {
-            return EasyNBTLootFunction(
-                    json.get("nbt").asJsonObject.asNBT()
-            )
+    companion object {
+        val CODEC: MapCodec<EasyNBTLootFunction> = RecordCodecBuilder.mapCodec { inst ->
+            inst.group(
+                CompoundTag.CODEC.fieldOf("nbt").forGetter { it.nbt }
+            ).apply(inst) { nbt -> EasyNBTLootFunction(nbt) }
         }
 
-        override fun toJson(json: JsonObject, obj: EasyNBTLootFunction, context: JsonSerializationContext) {
-            json.apply {
-                add("nbt",obj.nbt.asJSON())
-            }
-        }
-
+        val Type: LootItemFunctionType<EasyNBTLootFunction> = LootItemFunctionType(CODEC)
     }
 }

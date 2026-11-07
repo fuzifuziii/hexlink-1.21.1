@@ -3,19 +3,18 @@ package jempasam.hexlink.spirit
 import jempasam.hexlink.HexlinkMod
 import jempasam.hexlink.HexlinkRegistry
 import jempasam.hexlink.spirit.extractor.NodeExtractor
-import net.minecraft.util.Identifier
-import net.minecraft.util.registry.Registry
+import net.minecraft.resources.ResourceLocation
 
 
 @Suppress("unused")
 object HexlinkSpirits {
     private fun <T :Spirit>create(id: String, spirit: Spirit.SpiritType<T>): Spirit.SpiritType<T>{
-        Registry.register(HexlinkRegistry.SPIRIT, Identifier(HexlinkMod.MODID, id), spirit)
+        HexlinkRegistry.SPIRIT.register(ResourceLocation.fromNamespaceAndPath(HexlinkMod.MODID, id), spirit)
         return spirit
     }
 
     private fun <T: Spirit>create(id: String, spirit: NodeExtractor): NodeExtractor{
-        Registry.register(HexlinkRegistry.EXTRACTOR, Identifier(HexlinkMod.MODID, id), spirit)
+        HexlinkRegistry.EXTRACTOR.register(ResourceLocation.fromNamespaceAndPath(HexlinkMod.MODID, id), spirit)
         return spirit
     }
 

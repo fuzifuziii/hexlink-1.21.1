@@ -1,4 +1,0 @@
-{
-  "type": "hexlink:smelting",
-  "catalyzer": [ {"type": "hexlink:block", "value": "minecraft:fire"} ]
-}

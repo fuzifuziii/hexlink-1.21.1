@@ -1,10 +1,15 @@
 package jempasam.hexlink.data
 
 import jempasam.hexlink.spirit.Spirit
-import me.shedaniel.autoconfig.ConfigData
 
-object HexlinkConfiguration : ConfigData {
+/**
+ * Per-spirit settings loaded from `data/hexlink/hexlink_spirits/​*.json`.
+ *
+ * This used to implement Cloth Config's `ConfigData`, but the values are plain data read from
+ * the server's data pack, so no config-library integration is needed.
+ */
+object HexlinkConfiguration {
     class SpiritSettings(val use_soul: Boolean, val media_cost: Int)
-    val spirit_settings= mutableMapOf<Spirit.SpiritType<*>,SpiritSettings>()
 
+    val spirit_settings = mutableMapOf<Spirit.SpiritType<*>, SpiritSettings>()
 }

@@ -1,6 +1,15 @@
 {
-  "at": {"type": "hexlink:block", "value": "minecraft:dirt"},
-  "in": {"type": "hexlink:potion", "value": "minecraft:haste"},
-  "name": {"text": "Earth Element"},
+  "at": {
+    "type": "hexlink:block",
+    "value": "minecraft:dirt"
+  },
+  "in": {
+    "type": "hexlink:potion",
+    "value": "minecraft:haste"
+  },
+  "name": {
+    "translate": "hexlink.special_spirit.earth_element",
+    "fallback": "Earth Element"
+  },
   "color": 11436116
 }

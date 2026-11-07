@@ -8,15 +8,15 @@ import jempasam.hexlink.spirit.BlockSpirit
 import jempasam.hexlink.spirit.ItemSpirit
 import jempasam.hexlink.spirit.Spirit
 import jempasam.hexlink.spirit.StackHelper
-import net.minecraft.entity.Entity
-import net.minecraft.entity.player.PlayerEntity
-import net.minecraft.item.BlockItem
-import net.minecraft.item.Item
-import net.minecraft.item.ItemStack
-import net.minecraft.item.Items
-import net.minecraft.server.world.ServerWorld
-import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.Vec3d
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.player.Player
+import net.minecraft.world.item.BlockItem
+import net.minecraft.world.item.Item
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Items
+import net.minecraft.server.level.ServerLevel
+import net.minecraft.core.BlockPos
+import net.minecraft.world.phys.Vec3
 
 object SpiritHelper{
 
@@ -30,7 +30,7 @@ object SpiritHelper{
         } to targetFlux.maxcount
     }
 
-    fun spiritTarget(caster: PlayerEntity?, stack: ItemStack): SpiritTarget{
+    fun spiritTarget(caster: Player?, stack: ItemStack): SpiritTarget{
         val item=stack.item
         return when{
             item is ItemSpiritTarget -> item.getSpiritTarget(stack)
@@ -38,18 +38,18 @@ object SpiritHelper{
         }
     }
 
-    fun spiritTarget(caster: PlayerEntity): SpiritTarget{
+    fun spiritTarget(caster: Player): SpiritTarget{
         val inventory=caster.inventory
         return object: SpiritTarget{
             override fun fill(count: Int, spirit: Spirit): SpiritTarget.SpiritInputFlux {
-                val mainFlux= spiritTarget(caster,caster.mainHandStack).fill(count, spirit)
+                val mainFlux= spiritTarget(caster,caster.mainHandItem).fill(count, spirit)
                 if(mainFlux.maxcount>0)return mainFlux
 
-                val offhFlux= spiritTarget(caster,caster.offHandStack).fill(count, spirit)
+                val offhFlux= spiritTarget(caster,caster.offhandItem).fill(count, spirit)
                 if(offhFlux.maxcount>0)return offhFlux
 
-                for(i in 0 ..< inventory.size()){
-                    val stack= inventory.getStack(i)
+                for(i in 0 ..< inventory.containerSize){
+                    val stack= inventory.getItem(i)
                     val flux= spiritTarget(caster,stack).fill(count, spirit)
                     if(flux.maxcount>0)return flux
                 }
@@ -58,8 +58,8 @@ object SpiritHelper{
         }
     }
 
-    fun spiritTarget(caster: PlayerEntity?, world: ServerWorld, pos: Vec3d): SpiritTarget?{
-        val bpos=BlockPos(pos)
+    fun spiritTarget(caster: Player?, world: ServerLevel, pos: Vec3): SpiritTarget?{
+        val bpos=BlockPos.containing(pos)
         val state=world.getBlockState(bpos)
         val blocktype=state.block
         if(blocktype is BlockSpiritTarget){
@@ -75,7 +75,7 @@ object SpiritHelper{
         return null
     }
 
-    fun spiritTarget(caster: PlayerEntity?, entity: Entity): SpiritTarget?{
+    fun spiritTarget(caster: Player?, entity: Entity): SpiritTarget?{
         if(entity==caster){
             return spiritTarget(caster)
         }
@@ -91,7 +91,7 @@ object SpiritHelper{
         return null
     }
 
-    fun spiritSource(caster: PlayerEntity?, stack: ItemStack): SpiritSource{
+    fun spiritSource(caster: Player?, stack: ItemStack): SpiritSource{
         val item=stack.item
         return when{
             item is ItemSpiritSource -> item.getSpiritSource(stack)
@@ -99,20 +99,20 @@ object SpiritHelper{
         }
     }
 
-    fun spiritSource(caster: PlayerEntity): SpiritSource{
+    fun spiritSource(caster: Player): SpiritSource{
         val inventory=caster.inventory
         return object: SpiritSource{
             override fun extract(count: Int, spirit: Spirit): SpiritSource.SpiritOutputFlux {
                 if(caster.isCreative)return SpiritSource.SpiritOutputFlux(count) {}
 
-                val mainFlux= spiritSource(caster,caster.mainHandStack).extract(count,spirit)
+                val mainFlux= spiritSource(caster,caster.mainHandItem).extract(count,spirit)
                 if(mainFlux.maxcount>0)return mainFlux
 
-                val offFlux= spiritSource(caster,caster.offHandStack).extract(count,spirit)
+                val offFlux= spiritSource(caster,caster.offhandItem).extract(count,spirit)
                 if(offFlux.maxcount>0)return offFlux
 
-                for(i in 0 ..< inventory.size()){
-                    val stack=inventory.getStack(i)
+                for(i in 0 ..< inventory.containerSize){
+                    val stack=inventory.getItem(i)
                     val flux= spiritSource(caster,stack).extract(count,spirit)
                     if(flux.maxcount>0)return flux
                 }
@@ -120,14 +120,14 @@ object SpiritHelper{
             }
 
             override fun last(): Spirit?{
-                val mainFlux= spiritSource(caster,caster.mainHandStack).last()
+                val mainFlux= spiritSource(caster,caster.mainHandItem).last()
                 if(mainFlux!=null)return mainFlux
 
-                val offFlux= spiritSource(caster,caster.offHandStack).last()
+                val offFlux= spiritSource(caster,caster.offhandItem).last()
                 if(offFlux!=null)return offFlux
 
-                for(i in 0 ..< inventory.size()){
-                    val stack=inventory.getStack(i)
+                for(i in 0 ..< inventory.containerSize){
+                    val stack=inventory.getItem(i)
                     val flux= spiritSource(caster,stack).last()
                     if(flux!=null)return flux
                 }
@@ -137,11 +137,11 @@ object SpiritHelper{
             override fun all(): Set<Spirit> {
                 val ret= mutableSetOf<Spirit>()
 
-                spiritSource(caster,caster.mainHandStack).all().let { ret.addAll(it) }
-                spiritSource(caster,caster.offHandStack).all().let { ret.addAll(it) }
+                spiritSource(caster,caster.mainHandItem).all().let { ret.addAll(it) }
+                spiritSource(caster,caster.offhandItem).all().let { ret.addAll(it) }
 
-                for(i in 0 ..< inventory.size()){
-                    val stack=inventory.getStack(i)
+                for(i in 0 ..< inventory.containerSize){
+                    val stack=inventory.getItem(i)
                     spiritSource(caster,stack).all().let { ret.addAll(it) }
                 }
                 return ret
@@ -150,8 +150,8 @@ object SpiritHelper{
 
     }
 
-    fun spiritSource(caster: PlayerEntity?, world: ServerWorld, pos: Vec3d): SpiritSource?{
-        val bpos=BlockPos(pos)
+    fun spiritSource(caster: Player?, world: ServerLevel, pos: Vec3): SpiritSource?{
+        val bpos=BlockPos.containing(pos)
         val state=world.getBlockState(bpos)
         val blocktype=state.block
         if(blocktype is BlockSpiritSource)return blocktype.getSpiritSource(world, bpos)
@@ -164,7 +164,7 @@ object SpiritHelper{
         return null
     }
 
-    fun spiritSource(caster: PlayerEntity?, entity: Entity): SpiritSource?{
+    fun spiritSource(caster: Player?, entity: Entity): SpiritSource?{
         if(entity==caster){
             return spiritSource(caster)
         }

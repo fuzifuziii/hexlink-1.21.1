@@ -1,6 +1,15 @@
 {
-  "at": {"type": "hexlink:block", "value": "minecraft:water"},
-  "in": {"type": "hexlink:potion", "value": "minecraft:dolphins_grace"},
-  "name": {"text": "Water Element"},
+  "at": {
+    "type": "hexlink:block",
+    "value": "minecraft:water"
+  },
+  "in": {
+    "type": "hexlink:potion",
+    "value": "minecraft:dolphins_grace"
+  },
+  "name": {
+    "translate": "hexlink.special_spirit.water_element",
+    "fallback": "Water Element"
+  },
   "color": 3094527
 }

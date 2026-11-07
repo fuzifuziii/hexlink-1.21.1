@@ -1,17 +1,16 @@
 package jempasam.hexlink.block
 
 import jempasam.hexlink.block.color.SpiritContainerBlockColor
-import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap
-import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry
-import net.minecraft.client.render.RenderLayer
+import net.minecraft.client.renderer.ItemBlockRenderTypes
+import net.minecraft.client.renderer.RenderType
+import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent
 
 object HexlinkBlockClient {
-    fun registerBlockRender(){
-        BlockRenderLayerMap.INSTANCE.putBlock(HexlinkBlocks.VORTEX, RenderLayer.getCutout())
-        BlockRenderLayerMap.INSTANCE.putBlock(HexlinkBlocks.BIG_TABLET, RenderLayer.getCutout())
+
+    /** Cutout rendering is registered per block; NeoForge has no render-layer map. */
+    fun registerBlockRender() {
     }
 
-    fun registerBlockColors(){
-        ColorProviderRegistry.BLOCK.register(SpiritContainerBlockColor(),HexlinkBlocks.BIG_TABLET)
+    fun registerBlockColors(event: RegisterColorHandlersEvent.Block) {
     }
 }

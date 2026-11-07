@@ -1,0 +1,46 @@
+{
+  "name": "hexlink.page.bag",
+  "icon": "hexlink:medium_bag",
+  "category": "hexcasting:items",
+  "sortnum": 100,
+  "advancement": "hexcasting:root",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "hexlink.page.bag.desc"
+    },
+    {
+      "type": "patchouli:crafting",
+      "recipe": "hexlink:small_bag",
+      "text": "hexlink.page.bag.small_bag"
+    },
+    {
+      "type": "patchouli:crafting",
+      "recipe": "hexlink:medium_bag",
+      "text": "hexlink.page.bag.medium_bag"
+    },
+    {
+      "type": "patchouli:crafting",
+      "recipe": "hexlink:big_bag",
+      "text": "hexlink.page.bag.big_bag"
+    },
+    {
+      "type": "patchouli:crafting",
+      "recipe": "hexlink:tablet",
+      "text": "hexlink.page.bag.tablet"
+    },
+
+    {
+      "type": "patchouli:spotlight",
+      "item": "hexlink:philosophical_crystal[minecraft:custom_data={spirits:[{type:'hexlink:entity',value:'minecraft:blaze'}]}]",
+      "text": "hexlink.page.bag.philosophical_crystal",
+      "link_recipe": true
+    },
+    {
+      "type": "patchouli:spotlight",
+      "item": "hexlink:haunted_crystal[minecraft:custom_data={spirits:[{type:'hexlink:entity',value:'minecraft:zombie'},{type:'hexlink:block',value:'minecraft:fire'}]}]",
+      "text": "hexlink.page.bag.haunted_crystal",
+      "link_recipe": true
+    }
+  ]
+}

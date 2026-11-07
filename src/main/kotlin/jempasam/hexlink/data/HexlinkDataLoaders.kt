@@ -1,21 +1,26 @@
 package jempasam.hexlink.data
 
-
-import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener
-import net.fabricmc.fabric.api.resource.ResourceManagerHelper
-import net.minecraft.resource.ResourceType
-import net.minecraft.util.Identifier
+import net.neoforged.neoforge.event.AddReloadListenerEvent
 
 object HexlinkDataLoaders {
 
-    private fun <T: IdentifiableResourceReloadListener> register(loader: T): Identifier{
-        ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(loader)
-        return loader.fabricId
+    @JvmStatic
+    val SPIRIT_CONFIG = HexlinkSpiritDataLoader()
+
+    @JvmStatic
+    val SPIRITS = SpecialSpiritDataLoader
+    @JvmStatic
+    val EXTRACTORS = SpecialExtractorDataLoader
+
+    private val ALL = listOf(SPIRIT_CONFIG, SPIRITS, EXTRACTORS)
+
+    /** Called from NeoForge's `AddReloadListenerEvent`. */
+    fun register(event: AddReloadListenerEvent) {
+        // Entity/item predicates reference tags and enchantments are datapack registries, so
+        // the loaders below need the registry access of the reload that is about to run.
+        jempasam.hexlink.utils.HexlinkRegistryAccess.update(event.registryAccess)
+        for (loader in ALL) {
+            event.addListener(loader)
+        }
     }
-
-
-    @JvmStatic val SPIRIT_CONFIG= register(HexlinkSpiritDataLoader())
-    @JvmStatic val SPIRITS= register(SpecialSpiritDataLoader)
-    @JvmStatic val VORTEX_RECIPES= register(VortexRecipeDataLoader)
-    @JvmStatic val EXTRACTORS= register(SpecialExtractorDataLoader)
 }

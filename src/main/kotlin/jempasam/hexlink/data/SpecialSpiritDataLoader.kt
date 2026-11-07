@@ -7,30 +7,30 @@ import jempasam.hexlink.spirit.SpecialSpirit
 import jempasam.hexlink.spirit.Spirit
 import jempasam.hexlink.utils.NbtHelper
 import jempasam.hexlink.utils.asNBT
-import net.minecraft.nbt.NbtCompound
-import net.minecraft.text.Text
-import net.minecraft.util.Identifier
-import net.minecraft.util.JsonHelper
+import net.minecraft.nbt.CompoundTag
+import net.minecraft.network.chat.Component
+import net.minecraft.resources.ResourceLocation
+import net.minecraft.util.GsonHelper
 
 object SpecialSpiritDataLoader: JsonEntryDataLoader("special_spirits") {
 
     override fun before() = HexlinkRegistry.SPECIAL_SPIRIT.clear()
 
-    override fun apply(id: Identifier, obj: JsonObject) {
+    override fun apply(id: ResourceLocation, obj: JsonObject) {
         fun getSpiritOpt(obj: JsonObject, name: String): Spirit? {
             return obj.get(name)
                 ?.asNBT()
-                ?.let { if(it is NbtCompound) NbtHelper.readSpirit(it) else null }
+                ?.let { if(it is CompoundTag) NbtHelper.readSpirit(it) else null }
         }
 
         fun cast(spirit: Spirit?, name: String): Spirit {
             return spirit ?: throw JsonParseException("Missing or invalid \"$name\"")
         }
         val name=obj.get("name")
-            ?.let { Text.Serializer.fromJson(it) }
+            ?.let { net.minecraft.network.chat.ComponentSerialization.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE, it).result().orElse(null) }
             ?: throw JsonParseException("Missing or invalid \"name\"")
 
-        val color= JsonHelper.getInt(obj,"color")
+        val color= GsonHelper.getAsInt(obj,"color")
 
         var manifestAt: Spirit?=null
         var manifestIn: Spirit?=null

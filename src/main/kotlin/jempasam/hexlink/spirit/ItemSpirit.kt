@@ -1,105 +1,99 @@
 package jempasam.hexlink.spirit
 
-import com.google.common.base.Predicates
-import net.minecraft.entity.Entity
-import net.minecraft.entity.EntityType
-import net.minecraft.entity.LivingEntity
-import net.minecraft.entity.player.PlayerEntity
-import net.minecraft.item.BlockItem
-import net.minecraft.item.Item
-import net.minecraft.item.ItemUsageContext
-import net.minecraft.nbt.NbtElement
-import net.minecraft.nbt.NbtString
-import net.minecraft.server.world.ServerWorld
-import net.minecraft.text.Text
-import net.minecraft.util.*
-import net.minecraft.util.hit.BlockHitResult
-import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.Box
-import net.minecraft.util.math.Direction
-import net.minecraft.util.math.Vec3d
-import net.minecraft.util.registry.Registry
-import kotlin.jvm.optionals.getOrNull
+import net.minecraft.core.BlockPos
+import net.minecraft.core.Direction
+import net.minecraft.core.component.DataComponents
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.nbt.StringTag
+import net.minecraft.nbt.Tag
+import net.minecraft.network.chat.Component
+import net.minecraft.resources.ResourceLocation
+import net.minecraft.server.level.ServerLevel
+import net.minecraft.world.InteractionHand
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.EntityType
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.player.Player
+import net.minecraft.world.item.BlockItem
+import net.minecraft.world.item.Item
+import net.minecraft.world.item.DyeColor
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Rarity
+import net.minecraft.world.item.UseAnim
+import net.minecraft.world.item.context.UseOnContext
+import net.minecraft.world.phys.AABB
+import net.minecraft.world.phys.BlockHitResult
+import net.minecraft.world.phys.Vec3
 
 class ItemSpirit(val item: Item): Spirit {
 
-    private var color: Int=0
-    init{
-        if(item.isFireproof)
-            color=DyeColor.ORANGE.fireworkColor
-        else if(item.isFood)
-            color=DyeColor.BROWN.fireworkColor
-        else if(item.isEnchantable(item.defaultStack))
-            color=DyeColor.YELLOW.fireworkColor
-        else if(item.hasGlint(item.defaultStack))
-            color=DyeColor.MAGENTA.fireworkColor
-        else if(item is BlockItem)
-            color=item.block.defaultMapColor.color
-        else if(item.getRarity(item.defaultStack)!=Rarity.COMMON)
-            color=item.getRarity(item.defaultStack).formatting.colorValue ?: DyeColor.ORANGE.signColor
-        else
-            color=DyeColor.ORANGE.signColor
-    }
-
-
-    override fun manifestAt(caster: PlayerEntity, world: ServerWorld, position: Vec3d, count: Int): Spirit.Manifestation {
-        return Spirit.Manifestation(1,count){
-            val stack=item.defaultStack
-            stack.count=it
-            val oldHandItem=caster.mainHandStack
-            caster.setStackInHand(Hand.MAIN_HAND,stack)
-            for(i in 0..<it){
-                item.useOnBlock(
-                        ItemUsageContext(
-                                caster,
-                                Hand.MAIN_HAND,
-                                BlockHitResult(position, Direction.UP, BlockPos(position), true)
-                        )
-                )
-            }
-            caster.setStackInHand(Hand.MAIN_HAND, oldHandItem)
+    private val color: Int = run {
+        val stack = item.defaultInstance
+        when {
+            stack.has(DataComponents.FIRE_RESISTANT) -> DyeColor.ORANGE.getFireworkColor()
+            stack.get(DataComponents.FOOD) != null -> DyeColor.BROWN.getFireworkColor()
+            item.isEnchantable(stack) -> DyeColor.YELLOW.getFireworkColor()
+            item.isFoil(stack) -> DyeColor.MAGENTA.getFireworkColor()
+            item is BlockItem -> item.block.defaultMapColor().col
+            stack.rarity != Rarity.COMMON ->
+                stack.rarity.color().color ?: DyeColor.ORANGE.getTextColor()
+            else -> DyeColor.ORANGE.getTextColor()
         }
     }
 
-    override fun manifestIn(caster: PlayerEntity, world: ServerWorld, entity: Entity, count: Int): Spirit.Manifestation {
+    override fun manifestAt(caster: Player, world: ServerLevel, position: Vec3, count: Int): Spirit.Manifestation {
         return Spirit.Manifestation(1,count){
-            val stack=item.defaultStack
+            val stack=item.defaultInstance
             stack.count=it
-            val oldHandItem=caster.mainHandStack
-            caster.setStackInHand(Hand.MAIN_HAND,stack)
+            val oldHandItem=caster.mainHandItem
+            caster.setItemInHand(InteractionHand.MAIN_HAND,stack)
+            val hit = BlockHitResult(position, Direction.UP, BlockPos.containing(position), true)
+            for(i in 0..<it){
+                stack.useOn(UseOnContext(caster, InteractionHand.MAIN_HAND, hit))
+            }
+            caster.setItemInHand(InteractionHand.MAIN_HAND, oldHandItem)
+        }
+    }
+
+    override fun manifestIn(caster: Player, world: ServerLevel, entity: Entity, count: Int): Spirit.Manifestation {
+        return Spirit.Manifestation(1,count){
+            val stack=item.defaultInstance
+            stack.count=it
+            val oldHandItem=caster.mainHandItem
+            caster.setItemInHand(InteractionHand.MAIN_HAND,stack)
             if(entity==caster){
                 for(i in 0..<it){
-                    val action=item.getUseAction(stack)
-                    val success=item.use(world, caster, Hand.MAIN_HAND)
-                    if(action!=UseAction.NONE && action!=UseAction.BLOCK && success.result.isAccepted){
-                        item.onStoppedUsing(stack, world, caster, 0)
-                        item.finishUsing(stack,world,caster)
+                    val action=item.getUseAnimation(stack)
+                    val success=item.use(world, caster, InteractionHand.MAIN_HAND)
+                    if(action!=UseAnim.NONE && action!=UseAnim.BLOCK && success.result.consumesAction()){
+                        item.releaseUsing(stack, world, caster, 0)
+                        item.finishUsingItem(stack,world,caster)
                     }
                 }
             }
             else{
                 for(i in 0..<it) {
                     if (entity is LivingEntity) {
-                        item.useOnEntity(stack, caster, entity, Hand.MAIN_HAND)
+                        stack.interactLivingEntity(caster, entity, InteractionHand.MAIN_HAND)
                     }
-                    entity.interact(caster, Hand.MAIN_HAND)
+                    entity.interact(caster, InteractionHand.MAIN_HAND)
                 }
             }
-            caster.setStackInHand(Hand.MAIN_HAND, oldHandItem)
+            caster.setItemInHand(InteractionHand.MAIN_HAND, oldHandItem)
         }
     }
 
 
 
-    override fun lookIn(caster: PlayerEntity, world: ServerWorld, entity: Entity): Boolean {
+    override fun lookIn(caster: Player, world: ServerLevel, entity: Entity): Boolean {
         val stack= StackHelper.stack(caster,entity) ?: return false
-        val item=stack.stack.item
-        return item==this.item
+        return stack.stack.item==this.item
     }
 
-    override fun lookAt(caster: PlayerEntity, world: ServerWorld, position: Vec3d): Boolean {
-        val entities=world.getEntitiesByType( EntityType.ITEM, Box.of(position, 0.7, 0.7, 0.7), Predicates.alwaysTrue())
-        return entities.any { entity -> entity.stack.item==item }
+    override fun lookAt(caster: Player, world: ServerLevel, position: Vec3): Boolean {
+        val area = AABB(position.x-0.35, position.y-0.35, position.z-0.35, position.x+0.35, position.y+0.35, position.z+0.35)
+        val entities=world.getEntities(EntityType.ITEM, area) { true }
+        return entities.any { entity -> entity.item.item==item }
     }
 
 
@@ -108,14 +102,12 @@ class ItemSpirit(val item: Item): Spirit {
 
     override fun hashCode(): Int = item.hashCode()*36
 
-    override fun getColor(): Int{
-        return color
-    }
+    override fun getColor(): Int = color
 
-    override fun getName(): Text = item.name
+    override fun getName(): Component = item.defaultInstance.hoverName
 
-    override fun serialize(): NbtElement {
-        return NbtString.of(Registry.ITEM.getId(item).toString())
+    override fun serialize(): Tag {
+        return StringTag.valueOf(BuiltInRegistries.ITEM.getKey(item).toString())
     }
 
 
@@ -123,19 +115,13 @@ class ItemSpirit(val item: Item): Spirit {
     override fun getType(): Spirit.SpiritType<*> = Type
 
     object Type: Spirit.SpiritType<ItemSpirit>{
-        override fun getName(): Text {
-            return Text.translatable("hexlink.spirit.item")
-        }
+        override fun getName(): Component = Component.translatable("hexlink.spirit.item")
 
-        override fun deserialize(nbt: NbtElement): ItemSpirit? {
-            if(nbt is NbtString){
-                val type=Registry.ITEM.getOrEmpty(Identifier(nbt.asString())).getOrNull()
-                return if(type!=null) ItemSpirit(type) else null
-            }
-            else throw IllegalArgumentException()
+        override fun deserialize(nbt: Tag): ItemSpirit? {
+            if(nbt !is StringTag) throw IllegalArgumentException()
+            val id = ResourceLocation.tryParse(nbt.asString) ?: return null
+            val type = BuiltInRegistries.ITEM.getOptional(id).orElse(null) ?: return null
+            return ItemSpirit(type)
         }
     }
-
-
-
 }

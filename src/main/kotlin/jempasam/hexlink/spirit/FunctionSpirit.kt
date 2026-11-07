@@ -1,56 +1,61 @@
 package jempasam.hexlink.spirit
 
-import net.minecraft.entity.Entity
-import net.minecraft.entity.player.PlayerEntity
-import net.minecraft.nbt.NbtCompound
-import net.minecraft.nbt.NbtElement
-import net.minecraft.server.world.ServerWorld
-import net.minecraft.text.Text
-import net.minecraft.util.DyeColor
-import net.minecraft.util.Identifier
-import net.minecraft.util.math.Vec3d
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.player.Player
+import net.minecraft.nbt.CompoundTag
+import net.minecraft.nbt.Tag
+import net.minecraft.server.level.ServerLevel
+import net.minecraft.network.chat.Component
+import net.minecraft.world.item.DyeColor
+import net.minecraft.resources.ResourceLocation
+import net.minecraft.world.phys.Vec3
 import java.util.*
 
-class FunctionSpirit(val manifestAt: Identifier, val manifestIn: Identifier, val manifestAtCost: Int, val manifestInCost: Int) : Spirit{
+class FunctionSpirit(val manifestAt: ResourceLocation, val manifestIn: ResourceLocation, val manifestAtCost: Int, val manifestInCost: Int) : Spirit{
 
     private val regex=Regex.fromLiteral("{_[a-z],[A-Z]}")
     private val name=manifestAt.path
             .substringAfter("/")
             .replace(regex){" "+it.value.uppercase()}
 
-    override fun manifestAt(caster: PlayerEntity, world: ServerWorld, position: Vec3d, count: Int): Spirit.Manifestation {
-        val function=world.server.commandFunctionManager.getFunction(manifestAt)
+    override fun manifestAt(caster: Player, world: ServerLevel, position: Vec3, count: Int): Spirit.Manifestation {
+        val function = world.server.functions.get(manifestAt)
         if(function.isEmpty)
             return Spirit.NONE_MANIFESTATION
         else
             return Spirit.Manifestation(manifestAtCost, count){
                 for(i in 0..<it){
-                    val source=caster.commandSource.withPosition(position).withLevel(3)
-                    world.server.commandFunctionManager.execute(function.get(),source)
+                    val source = caster.createCommandSourceStack()
+                        .withPosition(position)
+                        .withLevel(world)
+                    world.server.functions.execute(function.get(), source)
                 }
             }
     }
 
-    override fun manifestIn(caster: PlayerEntity, world: ServerWorld, entity: Entity, count: Int): Spirit.Manifestation {
-        val function=world.server.commandFunctionManager.getFunction(manifestIn)
+    override fun manifestIn(caster: Player, world: ServerLevel, entity: Entity, count: Int): Spirit.Manifestation {
+        val function = world.server.functions.get(manifestIn)
         if(function.isEmpty)
             return Spirit.NONE_MANIFESTATION
         else
             return Spirit.Manifestation(manifestInCost, count){
                 for(i in 0..<it){
-                    val source=caster.commandSource.withEntity(entity).withPosition(entity.pos).withLevel(3)
-                    world.server.commandFunctionManager.execute(function.get(),source)
+                    val source = caster.createCommandSourceStack()
+                        .withEntity(entity)
+                        .withPosition(entity.position())
+                        .withLevel(world)
+                    world.server.functions.execute(function.get(), source)
                 }
             }
     }
 
-    override fun lookAt(caster: PlayerEntity, world: ServerWorld, position: Vec3d): Boolean = false
+    override fun lookAt(caster: Player, world: ServerLevel, position: Vec3): Boolean = false
 
-    override fun lookIn(caster: PlayerEntity, world: ServerWorld, entity: Entity): Boolean = false
+    override fun lookIn(caster: Player, world: ServerLevel, entity: Entity): Boolean = false
 
-    override fun getName(): Text = Text.of(name)
+    override fun getName(): Component = Component.literal(name)
 
-    override fun getColor(): Int = DyeColor.ORANGE.fireworkColor
+    override fun getColor(): Int = DyeColor.ORANGE.getFireworkColor()
 
     override fun equals(other: Any?): Boolean
         = other is FunctionSpirit &&
@@ -62,7 +67,7 @@ class FunctionSpirit(val manifestAt: Identifier, val manifestIn: Identifier, val
 
     override fun getType(): Spirit.SpiritType<*> = Type
 
-    override fun serialize(): NbtCompound = NbtCompound().apply {
+    override fun serialize(): CompoundTag = CompoundTag().apply {
         putString("manifestAt", manifestAt.toString())
         putString("manifestIn", manifestIn.toString())
         putInt("manifestAtCost", manifestAtCost)
@@ -72,13 +77,13 @@ class FunctionSpirit(val manifestAt: Identifier, val manifestIn: Identifier, val
 
 
     object Type : Spirit.SpiritType<FunctionSpirit>{
-        override fun getName(): Text = Text.translatable("hexlink.spirit.function")
+        override fun getName(): Component = Component.translatable("hexlink.spirit.function")
 
-        override fun deserialize(nbt: NbtElement): FunctionSpirit? {
-            if(nbt is NbtCompound){
+        override fun deserialize(nbt: Tag): FunctionSpirit? {
+            if(nbt is CompoundTag){
                 return FunctionSpirit(
-                        Identifier(nbt.getString("manifestAt")),
-                        Identifier(nbt.getString("manifestIn")),
+                        ResourceLocation.parse(nbt.getString("manifestAt")),
+                        ResourceLocation.parse(nbt.getString("manifestIn")),
                         nbt.getInt("manifestAtCost"),
                         nbt.getInt("manifestInCost")
                 )

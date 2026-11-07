@@ -1,62 +1,68 @@
 package jempasam.hexlink.block
 
+import com.mojang.serialization.MapCodec
 import jempasam.hexlink.block.functionnality.BlockSpiritContainer
 import jempasam.hexlink.block.functionnality.BlockSpiritSource
 import jempasam.hexlink.block.functionnality.BlockSpiritTarget
-import jempasam.hexlink.entity.block.HexVortexBlockEntity
 import jempasam.hexlink.particle.HexlinkParticles
 import jempasam.hexlink.spirit.Spirit
 import jempasam.hexlink.spirit.inout.SpiritSource
 import jempasam.hexlink.spirit.inout.SpiritTarget
-import net.minecraft.block.BlockRenderType
-import net.minecraft.block.BlockState
-import net.minecraft.block.BlockWithEntity
-import net.minecraft.block.ShapeContext
-import net.minecraft.block.entity.BlockEntity
-import net.minecraft.block.entity.BlockEntityTicker
-import net.minecraft.block.entity.BlockEntityType
-import net.minecraft.particle.ParticleTypes
-import net.minecraft.server.world.ServerWorld
-import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.Vec3d
-import net.minecraft.util.shape.VoxelShape
-import net.minecraft.world.BlockView
-import net.minecraft.world.World
+import net.minecraft.core.BlockPos
+import net.minecraft.core.particles.ParticleTypes
+import net.minecraft.server.level.ServerLevel
+import net.minecraft.world.level.BlockGetter
+import net.minecraft.world.level.Level
+import net.minecraft.world.level.block.BaseEntityBlock
+import net.minecraft.world.level.block.RenderShape
+import net.minecraft.world.level.block.entity.BlockEntity
+import net.minecraft.world.level.block.entity.BlockEntityTicker
+import net.minecraft.world.level.block.entity.BlockEntityType
+import net.minecraft.world.level.block.state.BlockBehaviour
+import net.minecraft.world.level.block.state.BlockState
+import net.minecraft.world.phys.Vec3
+import net.minecraft.world.phys.shapes.CollisionContext
+import net.minecraft.world.phys.shapes.VoxelShape
 
-open class SpiritContainerBlock<T: BlockEntity>(settings: Settings, private val type: ()->BlockEntityType<T>, private val ticker: BlockEntityTicker<T>, private val slot_count: Int, private val shape: VoxelShape)
-    : BlockWithEntity(settings), BlockSpiritSource, BlockSpiritTarget, BlockSpiritContainer{
+open class SpiritContainerBlock<T: BlockEntity>(
+    settings: BlockBehaviour.Properties,
+    protected val type: ()->BlockEntityType<T>,
+    protected val ticker: BlockEntityTicker<T>,
+    protected val slot_count: Int,
+    protected val shape: VoxelShape
+) : BaseEntityBlock(settings), BlockSpiritSource, BlockSpiritTarget, BlockSpiritContainer {
 
     companion object{
-        fun coloredParticle(world: World, pos: BlockPos, color: Int, count: Int){
-            val center=Vec3d.of(pos)
+        fun coloredParticle(world: Level, pos: BlockPos, color: Int, count: Int){
+            val center=Vec3.atLowerCornerOf(pos)
             val r = (color shr 16 and 0xFF).toDouble() / 255.0
             val g = (color shr 8 and 0xFF).toDouble() / 255.0
             val b = (color shr 0 and 0xFF).toDouble() / 255.0
             for (j in 0 until count) {
-                val pos=center.add(Math.random(), Math.random(),Math.random())
+                val particlePos=center.add(Math.random(), Math.random(),Math.random())
                 world.addParticle(
                     HexlinkParticles.SPIRIT,
-                    pos.x, pos.y, pos.z,
+                    particlePos.x, particlePos.y, particlePos.z,
                     r, g, b
                 )
             }
         }
     }
 
-    override fun createBlockEntity(pos: BlockPos, state: BlockState): BlockEntity? = type().instantiate(pos,state)
+    override fun codec(): MapCodec<out BaseEntityBlock> = simpleCodec { props -> SpiritContainerBlock(props, type, ticker, slot_count, shape) }
 
-    @Deprecated("Call AbstractBlockState.getRenderType")
-    override fun getRenderType(state: BlockState): BlockRenderType = BlockRenderType.MODEL
+    override fun newBlockEntity(pos: BlockPos, state: BlockState): BlockEntity = type().create(pos, state)!!
 
+    override fun getRenderShape(state: BlockState): RenderShape = RenderShape.MODEL
 
-    override fun <T : BlockEntity?> getTicker(world: World?, state: BlockState?, type: BlockEntityType<T>?): BlockEntityTicker<T>? {
-        return checkType(type, this.type()){w,p,s,be -> ticker.tick(w,p,s,be)}
+    override fun <T : BlockEntity?> getTicker(world: Level, state: BlockState, type: BlockEntityType<T>): BlockEntityTicker<T>? {
+        return createTickerHelper(type, this.type()) { w, p, s, be -> ticker.tick(w, p, s, be) }
     }
 
-    override fun onStateReplaced(state: BlockState, world: World, pos: BlockPos, newState: BlockState, moved: Boolean) {
-        if (!state.isOf(newState.block) && world is ServerWorld) {
-            val center=Vec3d.ofCenter(pos)
-            world.spawnParticles(
+    override fun onRemove(state: BlockState, world: Level, pos: BlockPos, newState: BlockState, moved: Boolean) {
+        if (!state.`is`(newState.block) && world is ServerLevel) {
+            val center=Vec3.atCenterOf(pos)
+            world.sendParticles(
                     ParticleTypes.CLOUD,
                     center.x, center.y, center.z,
                     10,
@@ -65,40 +71,38 @@ open class SpiritContainerBlock<T: BlockEntity>(settings: Settings, private val 
             )
         }
 
-        super.onStateReplaced(state, world, pos, newState, moved)
+        super.onRemove(state, world, pos, newState, moved)
     }
 
-    override fun getSpiritSource(world: ServerWorld, pos: BlockPos): SpiritSource {
+    override fun getSpiritSource(world: ServerLevel, pos: BlockPos): SpiritSource {
         return world.getBlockEntity(pos) as? SpiritSource ?: SpiritSource.NONE
     }
 
-    override fun getSpiritTarget(world: ServerWorld, pos: BlockPos): SpiritTarget {
+    override fun getSpiritTarget(world: ServerLevel, pos: BlockPos): SpiritTarget {
         return world.getBlockEntity(pos) as? SpiritTarget ?: SpiritTarget.NONE
     }
 
-    fun addAt(world: ServerWorld, pos: BlockPos): Boolean{
+    fun addAt(world: ServerLevel, pos: BlockPos): Boolean{
         val bstate=world.getBlockState(pos)
         val block=bstate.block
         if(bstate.isAir){
-            world.setBlockState(pos,defaultState)
+            world.setBlock(pos, defaultBlockState(), 3)
         }
         else if(block!=this)return false
-        val vortexEntity=world.getBlockEntity(pos)
-        vortexEntity as HexVortexBlockEntity
         return true
     }
 
-    fun canAddAt(world: ServerWorld, pos: BlockPos): Boolean{
+    fun canAddAt(world: ServerLevel, pos: BlockPos): Boolean{
         val bstate=world.getBlockState(pos)
         val block=bstate.block
         return bstate.isAir || block==this
     }
 
-    override fun getOutlineShape(state: BlockState, world: BlockView, pos: BlockPos, context: ShapeContext): VoxelShape {
-        return shape;
+    override fun getShape(state: BlockState, world: BlockGetter, pos: BlockPos, context: CollisionContext): VoxelShape {
+        return shape
     }
 
-    override fun getSpiritContent(slot: Int, world: World, pos: BlockPos): Sequence<Spirit>
+    override fun getSpiritContent(slot: Int, world: Level, pos: BlockPos): Sequence<Spirit>
         = (world.getBlockEntity(pos) as? BlockSpiritContainer)?.getSpiritContent(slot,world,pos)
                 ?: listOf<Spirit>().asSequence()
 

@@ -3,9 +3,9 @@ package jempasam.hexlink.spirit.extractor
 import com.google.gson.JsonObject
 import jempasam.hexlink.HexlinkMod
 import jempasam.hexlink.spirit.Spirit
-import net.minecraft.entity.Entity
-import net.minecraft.server.network.ServerPlayerEntity
-import net.minecraft.text.Text
+import net.minecraft.world.entity.Entity
+import net.minecraft.server.level.ServerPlayer
+import net.minecraft.network.chat.Component
 
 /**
  * Extract a Spirit Iota from a target entity
@@ -17,12 +17,12 @@ interface SpiritExtractor<T: Spirit>{
      * Try to extract spirits from an entity
      * @return The result containing the spirits extracted and that can consume the entity
      */
-    fun extract(caster: ServerPlayerEntity?, target: Entity): ExtractionResult<T>
+    fun extract(caster: ServerPlayer?, target: Entity): ExtractionResult<T>
 
     /**
      * Get a name describing extracted spirits
      */
-    fun getName(): Text
+    fun getName(): Component
 
     /**
      * Get a color representation of extracted spirits

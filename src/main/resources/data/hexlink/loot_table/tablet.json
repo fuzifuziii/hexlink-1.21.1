@@ -1,0 +1,22 @@
+{
+  "pools": [
+    {
+      "rolls": { "type": "minecraft:constant", "value": 1 },
+      "entries": [
+        {"weight":2, "type": "minecraft:item", "name": "hexlink:tablet"},
+
+        {"weight":3, "type": "minecraft:loot_table", "value": "hexlink:tablet/entity"},
+
+        {"weight":3, "type": "minecraft:loot_table", "value": "hexlink:tablet/block"},
+
+        {"weight":3, "type": "minecraft:loot_table", "value": "hexlink:tablet/potion"},
+
+        {"weight":3, "type": "minecraft:loot_table", "value": "hexlink:tablet/enchantment"},
+
+        {"weight":3, "type": "minecraft:loot_table", "value": "hexlink:tablet/color"},
+
+        {"weight":3, "type": "minecraft:loot_table", "value": "hexlink:tablet/item"}
+      ]
+    }
+  ]
+}

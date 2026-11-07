@@ -3,119 +3,113 @@ package jempasam.hexlink.utils
 import com.google.gson.*
 import com.mojang.brigadier.StringReader
 import jempasam.hexlink.spirit.Spirit
-import net.minecraft.nbt.*
-import net.minecraft.recipe.AbstractCookingRecipe
-import net.minecraft.recipe.RecipeType
-import net.minecraft.util.Identifier
-import net.minecraft.util.JsonHelper
-import net.minecraft.util.registry.Registry
+import net.minecraft.core.Registry
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.core.registries.Registries
+import net.minecraft.nbt.CompoundTag
+import net.minecraft.nbt.DoubleTag
+import net.minecraft.nbt.IntTag
+import net.minecraft.nbt.ListTag
+import net.minecraft.nbt.Tag
+import net.minecraft.nbt.TagParser
+import net.minecraft.resources.ResourceLocation
+import net.minecraft.util.GsonHelper
+import net.minecraft.world.item.crafting.AbstractCookingRecipe
+import net.minecraft.world.item.crafting.RecipeType
 import java.math.BigInteger
 
-fun JsonObject.asNBT(): NbtCompound{
-    val ret=NbtCompound()
-    for(e in this.entrySet()){
-        ret.put(e.key,e.value.asNBT())
+fun JsonObject.asNBT(): CompoundTag {
+    val ret = CompoundTag()
+    for (e in this.entrySet()) {
+        ret.put(e.key, e.value.asNBT())
     }
     return ret
 }
 
-fun JsonArray.asNBT(): NbtList{
-    val ret=NbtList()
-    for(e in this){
+fun JsonArray.asNBT(): ListTag {
+    val ret = ListTag()
+    for (e in this) {
         ret.add(e.asNBT())
     }
     return ret
 }
 
-fun JsonElement.asNBT(): NbtElement{
-    if(this.isJsonObject)return (this as JsonObject).asNBT()
-    else if(this.isJsonArray)return (this as JsonArray).asNBT()
-    else{
-        val prim=this.asJsonPrimitive
-        if(prim.isNumber){
-            when(val number=prim.asNumber){
-                is Byte, is Short, is Int, is Long, is BigInteger -> return NbtInt.of(number.toInt())
-                is Float, is Double -> return NbtDouble.of(number.toDouble())
-            }
+fun JsonElement.asNBT(): Tag {
+    if (this.isJsonObject) return (this as JsonObject).asNBT()
+    if (this.isJsonArray) return (this as JsonArray).asNBT()
+    val prim = this.asJsonPrimitive
+    if (prim.isNumber) {
+        when (val number = prim.asNumber) {
+            is Byte, is Short, is Int, is Long, is BigInteger -> return IntTag.valueOf(number.toInt())
+            is Float, is Double -> return DoubleTag.valueOf(number.toDouble())
         }
-        return PublicStringNbtReader(AcceptAllStringReader(this.asString)).parseElementPrimitive()
     }
+    return TagParser(AcceptAllStringReader(this.asString)).readValue()
 }
 
-fun main() {
-    val json="""{ "name":"Jean", "n":"56", "a":"56", "b":"56f", "c":"56d", "d":56, "e":5.6, "f":5.6, "g":6 }"""
-    val obj=JsonParser.parseString(json)
-    println(json)
-    println(obj)
-    println(obj.asNBT())
-    println(obj.asNBT().asJSON())
-}
-
-
-fun NbtCompound.asJSON(): JsonObject{
-    val ret=JsonObject()
-    for(key in this.keys){
-        this.get(key)?.let { ret.add(key,it.asJSON()) }
+fun CompoundTag.asJSON(): JsonObject {
+    val ret = JsonObject()
+    for (key in this.allKeys) {
+        this.get(key)?.let { ret.add(key, it.asJSON()) }
     }
     return ret
 }
 
-fun NbtList.asJSON(): JsonArray{
-    val ret=JsonArray()
-    for(e in this){
+fun ListTag.asJSON(): JsonArray {
+    val ret = JsonArray()
+    for (e in this) {
         ret.add(e.asJSON())
     }
     return ret
 }
 
-fun NbtElement.asJSON(): JsonElement{
+fun Tag.asJSON(): JsonElement {
     return when (this) {
-        is NbtCompound -> this.asJSON()
-        is NbtList -> this.asJSON()
-        is NbtInt -> JsonPrimitive(this.intValue())
-        is NbtDouble -> JsonPrimitive(this.doubleValue())
-        else -> JsonPrimitive(this.asString())
+        is CompoundTag -> this.asJSON()
+        is ListTag -> this.asJSON()
+        is IntTag -> JsonPrimitive(this.asInt)
+        is DoubleTag -> JsonPrimitive(this.asDouble)
+        else -> JsonPrimitive(this.asString)
     }
 }
 
 fun JsonObject.getSpirit(name: String): Spirit {
-    try{
-        return NbtHelper.readSpirit(JsonHelper.getObject(this, name))
-    }catch (e: Exception){
+    try {
+        return NbtHelper.readSpirit(GsonHelper.getAsJsonObject(this, name))
+    } catch (e: Exception) {
         throw JsonParseException("For \"$name\": ${e.message}")
     }
 }
 
-fun JsonObject.addSpirit(name: String, spirit: Spirit){
+fun JsonObject.addSpirit(name: String, spirit: Spirit) {
     this.add(name, NbtHelper.writeSpirit(spirit).asJSON())
 }
 
 fun JsonElement.asSpirit(): Spirit {
-    val obj=this.asJsonObject
+    val obj = this.asJsonObject
     return NbtHelper.readSpirit(obj.asNBT())
-            ?: throw JsonParseException("Invalid Spirit")
+        ?: throw JsonParseException("Invalid Spirit")
 }
 
-fun Spirit.toJSON(): JsonElement{
+fun Spirit.toJSON(): JsonElement {
     return NbtHelper.writeSpirit(this).asJSON()
 }
 
 @Suppress("UNCHECKED_CAST")
-fun JsonObject.getCookingRecipeType(name: String): RecipeType<AbstractCookingRecipe>{
-    val recipe=Registry.RECIPE_TYPE.get(Identifier(JsonHelper.getString(this,name)))
+fun JsonObject.getCookingRecipeType(name: String): RecipeType<AbstractCookingRecipe> {
+    val recipe = BuiltInRegistries.RECIPE_TYPE.get(ResourceLocation.parse(GsonHelper.getAsString(this, name)))
     recipe ?: throw JsonParseException("No such recipe type of furnace")
     return recipe as RecipeType<AbstractCookingRecipe>
 }
 
-fun JsonObject.addCookingRecipeType(name: String, recipeType: RecipeType<AbstractCookingRecipe>){
-    val id=Registry.RECIPE_TYPE.getKey(recipeType)
-    if(id!=null){
-        this.addProperty(name,id.toString())
+fun JsonObject.addCookingRecipeType(name: String, recipeType: RecipeType<AbstractCookingRecipe>) {
+    val id = BuiltInRegistries.RECIPE_TYPE.getKey(recipeType)
+    if (id != null) {
+        this.addProperty(name, id.toString())
     }
 }
 
-
-class AcceptAllStringReader(reader: String): StringReader(reader){
+class AcceptAllStringReader(reader: String) : StringReader(reader) {
     override fun readUnquotedString(): String {
         val start = cursor
         while (canRead()) {
@@ -125,23 +119,17 @@ class AcceptAllStringReader(reader: String): StringReader(reader){
     }
 }
 
-class PublicStringNbtReader(reader: StringReader): StringNbtReader(reader){
-    public override fun parseElementPrimitive(): NbtElement {
-        return super.parseElementPrimitive()
-    }
-}
-
-fun <T>jsonArray(list: List<T>, serializer: (T)->JsonElement): JsonArray{
-    val ret=JsonArray()
-    for(element in list){
+fun <T> jsonArray(list: List<T>, serializer: (T) -> JsonElement): JsonArray {
+    val ret = JsonArray()
+    for (element in list) {
         ret.add(serializer(element))
     }
     return ret
 }
 
-fun <T>JsonArray.read(deserializer: (JsonElement)->T): List<T>{
-    val ret= mutableListOf<T>()
-    for(element in this){
+fun <T> JsonArray.read(deserializer: (JsonElement) -> T): List<T> {
+    val ret = mutableListOf<T>()
+    for (element in this) {
         ret.add(deserializer(element))
     }
     return ret

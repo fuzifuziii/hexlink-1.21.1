@@ -1,12 +1,24 @@
 {
-  "name": "Item",
-  "color": [10190986, 8552596],
-
+  "name": {
+    "translate": "hexlink.extractor.item",
+    "fallback": "Item"
+  },
+  "color": [
+    10190986,
+    8552596
+  ],
   "nodes": [
-    ["ANY",
+    [
+      "ANY",
       [
-        {"node": "hexlink:item_predicate", "tag": "hexlink:stack_sized"},
-        {"node": "hexlink:item", "useDurability": true}
+        {
+          "node": "hexlink:item_predicate",
+          "items": "#hexlink:stack_sized"
+        },
+        {
+          "node": "hexlink:item",
+          "useDurability": true
+        }
       ],
       "hexlink:item"
     ]

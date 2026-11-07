@@ -1,24 +1,26 @@
 package jempasam.hexlink.iota
-import at.petrak.hexcasting.api.spell.iota.Iota
-import at.petrak.hexcasting.api.spell.iota.IotaType
-import at.petrak.hexcasting.common.lib.hex.HexIotaTypes
+
+import at.petrak.hexcasting.api.casting.iota.Iota
+import at.petrak.hexcasting.api.casting.iota.IotaType
 import jempasam.hexlink.HexlinkMod
-import net.minecraft.util.Identifier
-import net.minecraft.util.registry.Registry
+import net.minecraft.core.Registry
+import net.minecraft.resources.ResourceLocation
 
+object HexlinkIotas {
 
-object HexlinkIotas{
+    private val IOTAS = mutableMapOf<ResourceLocation, IotaType<*>>()
 
-    var IOTAS=HashMap<String,IotaType<*>>()
-
-    fun <T: Iota>make(id: String, type: IotaType<T>): IotaType<T>{
-        IOTAS.put(id, type)
+    fun <T : Iota> make(id: String, type: IotaType<T>): IotaType<T> {
+        IOTAS[ResourceLocation.fromNamespaceAndPath(HexlinkMod.MODID, id)] = type
         return type
     }
 
-    fun registerAll(){
-        for(entry in IOTAS) Registry.register(HexIotaTypes.REGISTRY, Identifier(HexlinkMod.MODID,entry.key), entry.value)
+    /** Called from the NeoForge `RegisterEvent` for HexCasting's iota-type registry. */
+    fun registerAll(registry: Registry<IotaType<*>>) {
+        for ((id, type) in IOTAS) {
+            Registry.register(registry, id, type)
+        }
     }
 
-    val SPIRIT= make("spirit", SpiritIota.Type)
+    val SPIRIT = make("spirit", SpiritIota.Type)
 }

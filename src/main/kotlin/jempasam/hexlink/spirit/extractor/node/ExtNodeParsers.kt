@@ -2,12 +2,11 @@ package jempasam.hexlink.spirit.extractor.node
 
 import jempasam.hexlink.HexlinkMod
 import jempasam.hexlink.HexlinkRegistry
-import net.minecraft.util.Identifier
-import net.minecraft.util.registry.Registry
+import net.minecraft.resources.ResourceLocation
 
 object ExtNodeParsers {
     private fun <T: ExtractionNode.Parser<*>> register(id: String, node: T): T{
-        Registry.register(HexlinkRegistry.EXTRACTOR_NODE_PARSER, Identifier(HexlinkMod.MODID,id), node)
+        HexlinkRegistry.EXTRACTOR_NODE_PARSER.register(ResourceLocation.fromNamespaceAndPath(HexlinkMod.MODID, id), node)
         return node
     }
 

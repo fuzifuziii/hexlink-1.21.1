@@ -1,0 +1,15 @@
+{
+  "replace": false,
+  "entries": [
+    "hexlink:magic_loots_simple_dungeon_1",
+    "hexlink:magic_loots_desert_pyramid_1",
+    "hexlink:magic_loots_stronghold_library_1",
+    "hexlink:magic_loots_stronghold_library_2",
+    "hexlink:magic_loots_stronghold_library_3",
+    "hexlink:magic_loots_village_temple_1",
+    "hexlink:magic_loots_village_temple_2",
+    "hexlink:magic_loots_village_temple_3",
+    "hexlink:magic_loots_woodland_mansion_1",
+    "hexlink:magic_loots_woodland_mansion_2"
+  ]
+}

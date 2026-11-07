@@ -1,9 +1,18 @@
 {
-  "name": "Flowers",
-  "color": [16742338, 16751810],
+  "name": {
+    "translate": "hexlink.extractor.special.flower",
+    "fallback": "Flowers"
+  },
+  "color": [
+    16742338,
+    16751810
+  ],
   "color_duration": 500,
   "nodes": [
-    {"node": "hexlink:item_predicate", "tag": "minecraft:small_flowers"},
+    {
+      "node": "hexlink:item_predicate",
+      "items": "#minecraft:small_flowers"
+    },
     "hexlink:block"
   ]
 }

@@ -1,9 +1,9 @@
 package jempasam.hexlink.block.functionnality
 
 import jempasam.hexlink.spirit.inout.SpiritTarget
-import net.minecraft.server.world.ServerWorld
-import net.minecraft.util.math.BlockPos
+import net.minecraft.server.level.ServerLevel
+import net.minecraft.core.BlockPos
 
 interface BlockSpiritTarget {
-    fun getSpiritTarget(world: ServerWorld, pos: BlockPos): SpiritTarget
+    fun getSpiritTarget(world: ServerLevel, pos: BlockPos): SpiritTarget
 }

@@ -1,29 +1,31 @@
 package jempasam.hexlink.mishap
 
-import at.petrak.hexcasting.api.misc.FrozenColorizer
-import at.petrak.hexcasting.api.spell.casting.CastingContext
-import at.petrak.hexcasting.api.spell.iota.Iota
-import at.petrak.hexcasting.api.spell.mishaps.Mishap
+import at.petrak.hexcasting.api.pigment.FrozenPigment
+import at.petrak.hexcasting.api.casting.eval.CastingEnvironment
+import at.petrak.hexcasting.api.casting.iota.Iota
+import at.petrak.hexcasting.api.casting.mishaps.Mishap
+import at.petrak.hexcasting.api.utils.TreeList
 import jempasam.hexlink.spirit.extractor.SpiritExtractor
-import net.minecraft.entity.Entity
-import net.minecraft.entity.effect.StatusEffectInstance
-import net.minecraft.entity.effect.StatusEffects
-import net.minecraft.text.Style
-import net.minecraft.text.Text
-import net.minecraft.util.DyeColor
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.effect.MobEffectInstance
+import net.minecraft.world.effect.MobEffects
+import net.minecraft.network.chat.Style
+import net.minecraft.network.chat.Component
+import net.minecraft.world.item.DyeColor
 
 class MishapNotExtractable(val entity: Entity, val extractor: SpiritExtractor<*>) : Mishap() {
-    override fun errorMessage(ctx: CastingContext, errorCtx: Context): Text {
-        return Text.translatable("hexlink.mishap.not_extractable", entity.name, extractor.getName()).setStyle(Style.EMPTY.withColor(DyeColor.RED.signColor))
-        //return entity.name.copy().append(Text.translatable("hexlink.mishap.not_extractable")).append(item.name).setStyle(Style.EMPTY.withColor(DyeColor.RED.signColor))
+    override fun errorMessage(ctx: CastingEnvironment, errorCtx: Context): Component {
+        return Component.translatable("hexlink.mishap.not_extractable", entity.name, extractor.getName()).setStyle(Style.EMPTY.withColor(DyeColor.RED.getTextColor()))
+        //return entity.name.copy().append(Component.translatable("hexlink.mishap.not_extractable")).append(item.name).setStyle(Style.EMPTY.withColor(DyeColor.RED.getTextColor()))
     }
 
-    override fun accentColor(ctx: CastingContext, errorCtx: Context): FrozenColorizer {
+    override fun accentColor(ctx: CastingEnvironment, errorCtx: Context): FrozenPigment {
         return dyeColor(DyeColor.RED)
     }
 
-    override fun execute(ctx: CastingContext, errorCtx: Context, stack: MutableList<Iota>) {
-        ctx.caster.addStatusEffect(StatusEffectInstance(StatusEffects.NAUSEA,120))
+    override fun execute(ctx: CastingEnvironment, errorCtx: Context, stack: TreeList<Iota>): TreeList<Iota> {
+        (ctx.castingEntity as? net.minecraft.world.entity.LivingEntity)?.addEffect(MobEffectInstance(MobEffects.CONFUSION,120))
+        return stack
     }
 
 }

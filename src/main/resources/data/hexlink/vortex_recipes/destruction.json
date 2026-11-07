@@ -1,9 +1,0 @@
-{
-  "type": "hexlink:pattern",
-  "catalyzer": [
-    {"type": "hexlink:item", "value": "minecraft:iron_pickaxe"}
-  ],
-  "pattern": [
-    [{"input": 0, "mat": 0}]
-  ]
-}

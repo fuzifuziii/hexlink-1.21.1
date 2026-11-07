@@ -1,27 +1,28 @@
 package jempasam.hexlink.spirit
 
-import net.minecraft.entity.Entity
-import net.minecraft.entity.player.PlayerEntity
-import net.minecraft.item.DyeItem
-import net.minecraft.item.DyeableItem
-import net.minecraft.item.Item
-import net.minecraft.item.Items
-import net.minecraft.nbt.AbstractNbtNumber
-import net.minecraft.nbt.NbtElement
-import net.minecraft.nbt.NbtInt
-import net.minecraft.particle.DustParticleEffect
-import net.minecraft.server.world.ServerWorld
-import net.minecraft.text.Text
-import net.minecraft.util.math.ColorHelper
-import net.minecraft.util.math.Vec3d
-import net.minecraft.util.math.Vec3f
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.player.Player
+import net.minecraft.world.item.DyeItem
+import net.minecraft.core.component.DataComponents
+import net.minecraft.world.item.component.DyedItemColor
+import net.minecraft.world.item.Item
+import net.minecraft.world.item.Items
+import net.minecraft.nbt.NumericTag
+import net.minecraft.nbt.Tag
+import net.minecraft.nbt.IntTag
+import net.minecraft.core.particles.DustParticleOptions
+import net.minecraft.server.level.ServerLevel
+import net.minecraft.network.chat.Component
+import net.minecraft.util.FastColor
+import net.minecraft.world.phys.Vec3
+import org.joml.Vector3f
 
 class ColorSpirit(private val color: Int) : Spirit {
     private val entry= find(color)
 
     override fun getColor(): Int = color
 
-    override fun getName(): Text = Text.of(entry.name)
+    override fun getName(): Component = Component.literal(entry.name)
 
     override fun equals(other: Any?): Boolean = other is ColorSpirit && color==other.color
 
@@ -29,25 +30,25 @@ class ColorSpirit(private val color: Int) : Spirit {
 
     fun colorize(stack: StackHelper.WorldStack?): Spirit.Manifestation{
         if(stack==null)return Spirit.NONE_MANIFESTATION
-        val item=stack.stack.item
-        if(item is DyeableItem){
+        // Only items that already carry a dye colour can be recoloured.
+        if(stack.stack.get(DataComponents.DYED_COLOR)!=null){
             return Spirit.Manifestation(5,1){
-                item.setColor(stack.stack,color)
+                stack.stack.set(DataComponents.DYED_COLOR, DyedItemColor(color, true))
                 stack.update()
             }
         }
         return Spirit.NONE_MANIFESTATION
     }
 
-    override fun manifestAt(caster: PlayerEntity, world: ServerWorld, position: Vec3d, count: Int): Spirit.Manifestation{
+    override fun manifestAt(caster: Player, world: ServerLevel, position: Vec3, count: Int): Spirit.Manifestation{
         return Spirit.Manifestation(1,count){
-            val color=Vec3f(
-                    ColorHelper.Argb.getRed(color)/255f,
-                    ColorHelper.Argb.getGreen(color)/255f,
-                    ColorHelper.Argb.getBlue(color)/255f
+            val color=Vector3f(
+                    FastColor.ARGB32.red(color)/255f,
+                    FastColor.ARGB32.green(color)/255f,
+                    FastColor.ARGB32.blue(color)/255f
             )
-            world.spawnParticles(
-                    DustParticleEffect(color, 1.0f*count),
+            world.sendParticles(
+                    DustParticleOptions(color, 1.0f*count),
                     position.x, position.y, position.z,
                     count,
                     0.1*count, 0.1*count, 0.1*count,
@@ -56,37 +57,34 @@ class ColorSpirit(private val color: Int) : Spirit {
         }
     }
 
-    override fun manifestIn(caster: PlayerEntity, world: ServerWorld, entity: Entity, count: Int): Spirit.Manifestation
+    override fun manifestIn(caster: Player, world: ServerLevel, entity: Entity, count: Int): Spirit.Manifestation
         = colorize(StackHelper.stack(caster,entity))
 
 
     fun testColor(stack: StackHelper.WorldStack?): Boolean{
         if(stack==null)return false
-        val item=stack.stack.item
-        if(item is DyeableItem){
-            return color==item.getColor(stack.stack)
-        }
-        return false
+        val dyed=stack.stack.get(DataComponents.DYED_COLOR) ?: return false
+        return color==DyedItemColor.getOrDefault(stack.stack, dyed.rgb())
     }
-    override fun lookAt(caster: PlayerEntity, world: ServerWorld, position: Vec3d): Boolean
+    override fun lookAt(caster: Player, world: ServerLevel, position: Vec3): Boolean
             = testColor(StackHelper.stack(caster,world,position))
 
-    override fun lookIn(caster: PlayerEntity, world: ServerWorld, entity: Entity): Boolean
+    override fun lookIn(caster: Player, world: ServerLevel, entity: Entity): Boolean
             = testColor(StackHelper.stack(caster,entity))
 
 
 
-    override fun serialize(): NbtElement {
-        return NbtInt.of(color)
+    override fun serialize(): Tag {
+        return IntTag.valueOf(color)
     }
 
     override fun getType(): Spirit.SpiritType<*> = Type
 
     object Type: Spirit.SpiritType<ColorSpirit>{
-        override fun getName(): Text = Text.translatable("hexlink.spirit.color")
+        override fun getName(): Component = Component.translatable("hexlink.spirit.color")
 
-        override fun deserialize(nbt: NbtElement): ColorSpirit?{
-            return (nbt as? AbstractNbtNumber)?.let { ColorSpirit(it.intValue()) }
+        override fun deserialize(nbt: Tag): ColorSpirit?{
+            return (nbt as? NumericTag)?.let { ColorSpirit(it.asInt) }
         }
     }
 
@@ -98,9 +96,9 @@ class ColorSpirit(private val color: Int) : Spirit {
             = ColorCode(r,g,b) to ColorEntry(item as DyeItem, name, r*100+g*10+b)
 
         private fun find(color: Int): ColorEntry = color_map[ColorCode(
-                ColorHelper.Argb.getRed(color)/86,
-                ColorHelper.Argb.getGreen(color)/86,
-                ColorHelper.Argb.getBlue(color)/86
+                FastColor.ARGB32.red(color)/86,
+                FastColor.ARGB32.green(color)/86,
+                FastColor.ARGB32.blue(color)/86
             )] ?: invalid_color
 
         private val invalid_color=ColorEntry(Items.BLACK_DYE as DyeItem, "Invalid Color", 9999)

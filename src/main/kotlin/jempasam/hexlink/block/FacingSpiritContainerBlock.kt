@@ -1,66 +1,72 @@
 package jempasam.hexlink.block
 
-import net.minecraft.block.Block
-import net.minecraft.block.BlockState
-import net.minecraft.block.HorizontalFacingBlock
-import net.minecraft.block.ShapeContext
-import net.minecraft.block.entity.BlockEntity
-import net.minecraft.block.entity.BlockEntityTicker
-import net.minecraft.block.entity.BlockEntityType
-import net.minecraft.item.ItemPlacementContext
-import net.minecraft.state.StateManager
-import net.minecraft.util.BlockMirror
-import net.minecraft.util.BlockRotation
-import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.Box
-import net.minecraft.util.math.Direction
-import net.minecraft.util.shape.VoxelShape
-import net.minecraft.util.shape.VoxelShapes
-import net.minecraft.world.BlockView
+import com.mojang.serialization.MapCodec
+import net.minecraft.core.BlockPos
+import net.minecraft.core.Direction
+import net.minecraft.world.item.context.BlockPlaceContext
+import net.minecraft.world.level.BlockGetter
+import net.minecraft.world.level.block.BaseEntityBlock
+import net.minecraft.world.level.block.Block
+import net.minecraft.world.level.block.HorizontalDirectionalBlock
+import net.minecraft.world.level.block.Mirror
+import net.minecraft.world.level.block.Rotation
+import net.minecraft.world.level.block.entity.BlockEntity
+import net.minecraft.world.level.block.entity.BlockEntityTicker
+import net.minecraft.world.level.block.entity.BlockEntityType
+import net.minecraft.world.level.block.state.BlockBehaviour
+import net.minecraft.world.level.block.state.BlockState
+import net.minecraft.world.level.block.state.StateDefinition
+import net.minecraft.world.phys.AABB
+import net.minecraft.world.phys.shapes.CollisionContext
+import net.minecraft.world.phys.shapes.Shapes
+import net.minecraft.world.phys.shapes.VoxelShape
 
 class FacingSpiritContainerBlock<T: BlockEntity>(
-    settings: Settings,
+    settings: BlockBehaviour.Properties,
     type: () -> BlockEntityType<T>,
     ticker: BlockEntityTicker<T>,
     slot_count: Int, shape: VoxelShape
 ) : SpiritContainerBlock<T>(settings, type, ticker, slot_count, shape){
 
-    override fun rotate(state: BlockState, rotation: BlockRotation): BlockState {
-        return state.with(FACING, rotation.rotate(state.get(FACING) as Direction))
+    override fun codec(): MapCodec<out BaseEntityBlock> =
+        simpleCodec { props -> FacingSpiritContainerBlock(props, type, ticker, slot_count, shape) }
+
+    override fun rotate(state: BlockState, rotation: Rotation): BlockState {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)))
     }
 
-    override fun mirror(state: BlockState, mirror: BlockMirror): BlockState {
-        return state.rotate(mirror.getRotation(state.get(FACING) as Direction))
+    override fun mirror(state: BlockState, mirror: Mirror): BlockState {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)))
     }
 
-    override fun appendProperties(builder: StateManager.Builder<Block?, BlockState>) {
-        super.appendProperties(builder)
+    override fun createBlockStateDefinition(builder: StateDefinition.Builder<Block, BlockState>) {
+        super.createBlockStateDefinition(builder)
         builder.add(FACING)
     }
 
-    override fun getOutlineShape(state: BlockState, world: BlockView, pos: BlockPos, context: ShapeContext): VoxelShape {
-        val base=super.getOutlineShape(state, world, pos, context)
-        if(state.get(FACING).axis==Direction.Axis.Z){
+    override fun getShape(state: BlockState, world: BlockGetter, pos: BlockPos, context: CollisionContext): VoxelShape {
+        val base=super.getShape(state, world, pos, context)
+        if(state.getValue(FACING).axis==Direction.Axis.Z){
             return base
         }
         else{
-            return base.boundingBoxes
-                .map { Box(it.minZ,it.minY,it.minX, it.maxZ,it.maxY,it.maxX) }
-                .map { VoxelShapes.cuboid(it) }
-                .reduceRight{a,b -> VoxelShapes.union(a,b)}
+            return base.toAabbs()
+                .map { AABB(it.minZ,it.minY,it.minX, it.maxZ,it.maxY,it.maxX) }
+                .map { Shapes.create(it) }
+                .reduceRight{a,b -> Shapes.or(a,b)}
         }
     }
 
-    override fun getPlacementState(ctx: ItemPlacementContext): BlockState {
-        for (direction in ctx.placementDirections) {
+    override fun getStateForPlacement(ctx: BlockPlaceContext): BlockState {
+        for (direction in ctx.nearestLookingDirections) {
             if (direction.axis.isHorizontal) {
-                return defaultState.with(FACING, direction.opposite)
+                return defaultBlockState().setValue(FACING, direction.opposite)
             }
         }
-        return defaultState
+        return defaultBlockState()
     }
 
     companion object{
-        val FACING=HorizontalFacingBlock.FACING
+        val FACING = HorizontalDirectionalBlock.FACING
     }
 }

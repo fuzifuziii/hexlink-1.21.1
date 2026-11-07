@@ -8,6 +8,9 @@
       "manifestAtCost": 1000
     }
   },
-  "name": {"text": "God Element"},
+  "name": {
+    "translate": "hexlink.special_spirit.god_element",
+    "fallback": "God Element"
+  },
   "color": 16777215
 }

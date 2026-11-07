@@ -7,12 +7,12 @@ import jempasam.hexlink.HexlinkMod
 import jempasam.hexlink.HexlinkRegistry
 import jempasam.hexlink.utils.NbtHelper
 import jempasam.hexlink.utils.asNBT
-import net.minecraft.entity.Entity
-import net.minecraft.entity.player.PlayerEntity
-import net.minecraft.nbt.NbtElement
-import net.minecraft.server.world.ServerWorld
-import net.minecraft.text.Text
-import net.minecraft.util.math.Vec3d
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.player.Player
+import net.minecraft.nbt.Tag
+import net.minecraft.server.level.ServerLevel
+import net.minecraft.network.chat.Component
+import net.minecraft.world.phys.Vec3
 
 /**
  * A Spirit Type
@@ -26,7 +26,7 @@ interface Spirit {
      * @param position The location
      * @param count Spirit count used in the infusion
      */
-    fun manifestAt(caster: PlayerEntity, world: ServerWorld, position: Vec3d, count: Int): Manifestation
+    fun manifestAt(caster: Player, world: ServerLevel, position: Vec3, count: Int): Manifestation
 
     /**
      * Manifest the spirit in an entity.
@@ -35,7 +35,7 @@ interface Spirit {
      * @param entity The entity
      * @param count Spirit count used in the infusion
      */
-    fun manifestIn(caster: PlayerEntity, world: ServerWorld, entity: Entity, count: Int): Manifestation
+    fun manifestIn(caster: Player, world: ServerLevel, entity: Entity, count: Int): Manifestation
 
     /**
      * Manifest the spirit as a link between two location.
@@ -45,7 +45,7 @@ interface Spirit {
      * @param to Second location
      * @param count Spirit count used in the infusion
      */
-    fun manifestBetween(caster: PlayerEntity, world: ServerWorld, from: Vec3d, to: Vec3d, count: Int): Manifestation{
+    fun manifestBetween(caster: Player, world: ServerLevel, from: Vec3, to: Vec3, count: Int): Manifestation{
         return manifestAt(caster,world,from,count)
     }
 
@@ -57,7 +57,7 @@ interface Spirit {
      * @param to Second entity
      * @param count Spirit count used in the infusion
      */
-    fun manifestBetween(caster: PlayerEntity, world: ServerWorld, from: Entity, to: Entity, count: Int): Manifestation{
+    fun manifestBetween(caster: Player, world: ServerLevel, from: Entity, to: Entity, count: Int): Manifestation{
         return manifestIn(caster,world,from,count)
     }
 
@@ -69,7 +69,7 @@ interface Spirit {
      * @param to A location
      * @param count Spirit count used in the infusion
      */
-    fun manifestBetween(caster: PlayerEntity, world: ServerWorld, from: Entity, to: Vec3d, count: Int): Manifestation{
+    fun manifestBetween(caster: Player, world: ServerLevel, from: Entity, to: Vec3, count: Int): Manifestation{
         return manifestIn(caster,world,from,count)
     }
 
@@ -94,12 +94,12 @@ interface Spirit {
     /**
      * Make the spirit look at a location
      */
-    fun lookAt(caster: PlayerEntity, world: ServerWorld, position: Vec3d): Boolean
+    fun lookAt(caster: Player, world: ServerLevel, position: Vec3): Boolean
 
     /**
      * Make the spirit look at an entity
      */
-    fun lookIn(caster: PlayerEntity, world: ServerWorld, entity: Entity): Boolean
+    fun lookIn(caster: Player, world: ServerLevel, entity: Entity): Boolean
 
     override fun equals(other: Any?): Boolean
 
@@ -113,17 +113,17 @@ interface Spirit {
     /**
      * Get spirit name
      */
-    fun getName(): Text
+    fun getName(): Component
 
-    fun serialize(): NbtElement
+    fun serialize(): Tag
 
     fun getType(): SpiritType<*>
 
 
     interface SpiritType<T: Spirit>{
-        fun deserialize(nbt: NbtElement): T?
+        fun deserialize(nbt: Tag): T?
 
-        fun getName(): Text
+        fun getName(): Component
 
         fun deserialize(obj: JsonObject): T{
             val element= obj.get("value") ?: throw JsonSyntaxException("Expected \"value\"")

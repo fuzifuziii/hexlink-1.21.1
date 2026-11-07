@@ -1,5 +1,11 @@
 {
-  "all": {"type": "hexlink:potion", "value": "minecraft:levitation"},
-  "name": {"text": "Air Element"},
+  "all": {
+    "type": "hexlink:potion",
+    "value": "minecraft:levitation"
+  },
+  "name": {
+    "translate": "hexlink.special_spirit.air_element",
+    "fallback": "Air Element"
+  },
   "color": 13420277
 }

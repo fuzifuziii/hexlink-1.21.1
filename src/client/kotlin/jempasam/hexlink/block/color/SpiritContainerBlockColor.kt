@@ -1,13 +1,13 @@
 package jempasam.hexlink.block.color
 
 import jempasam.hexlink.spirit.inout.SpiritSource
-import net.minecraft.block.BlockState
-import net.minecraft.client.color.block.BlockColorProvider
-import net.minecraft.util.math.BlockPos
-import net.minecraft.world.BlockRenderView
+import net.minecraft.world.level.block.state.BlockState
+import net.minecraft.client.color.block.BlockColor
+import net.minecraft.core.BlockPos
+import net.minecraft.world.level.BlockAndTintGetter
 
-class SpiritContainerBlockColor : BlockColorProvider {
-    override fun getColor(state: BlockState, world: BlockRenderView?, pos: BlockPos?, tintIndex: Int): Int {
+class SpiritContainerBlockColor : BlockColor {
+    override fun getColor(state: BlockState, world: BlockAndTintGetter?, pos: BlockPos?, tintIndex: Int): Int {
         if(pos!=null && world!=null){
             val entity=world.getBlockEntity(pos)
             if(entity is SpiritSource){

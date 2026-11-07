@@ -1,94 +1,77 @@
 package jempasam.hexlink.spirit
 
-import net.minecraft.entity.Entity
-import net.minecraft.entity.EntityType
-import net.minecraft.entity.LivingEntity
-import net.minecraft.entity.effect.StatusEffect
-import net.minecraft.entity.effect.StatusEffectInstance
-import net.minecraft.entity.player.PlayerEntity
-import net.minecraft.nbt.NbtElement
-import net.minecraft.nbt.NbtString
-import net.minecraft.server.world.ServerWorld
-import net.minecraft.text.Text
-import net.minecraft.util.Identifier
-import net.minecraft.util.math.Vec3d
-import net.minecraft.util.registry.Registry
-import kotlin.jvm.optionals.getOrNull
+import net.minecraft.core.Holder
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.nbt.StringTag
+import net.minecraft.nbt.Tag
+import net.minecraft.network.chat.Component
+import net.minecraft.resources.ResourceLocation
+import net.minecraft.server.level.ServerLevel
+import net.minecraft.world.effect.MobEffect
+import net.minecraft.world.effect.MobEffectInstance
+import net.minecraft.world.entity.AreaEffectCloud
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.player.Player
+import net.minecraft.world.item.alchemy.PotionContents
+import net.minecraft.world.phys.Vec3
+import java.util.Optional
 
-class PotionSpirit(val potionEffect: StatusEffect): Spirit  {
+class PotionSpirit(val potionEffect: Holder<MobEffect>) : Spirit {
 
-    override fun manifestAt(caster: PlayerEntity, world: ServerWorld, position: Vec3d, count: Int): Spirit.Manifestation {
+    override fun manifestAt(caster: Player, world: ServerLevel, position: Vec3, count: Int): Spirit.Manifestation {
         return Spirit.Manifestation(1,count){
-            val effect=StatusEffectInstance(potionEffect, it*100, it/4)
-            val cloud=EntityType.AREA_EFFECT_CLOUD.create(world)
-            if(cloud!=null){
-                cloud.addEffect(effect)
-                cloud.color=potionEffect.color
-                cloud.radius=it.toFloat()
-                cloud.duration=it*100
-                cloud.setPosition(position)
-                world.spawnEntity(cloud)
-            }
+            val cloud = AreaEffectCloud(world, position.x, position.y, position.z)
+            cloud.setPotionContents(
+                PotionContents(Optional.empty(), Optional.empty(), listOf(MobEffectInstance(potionEffect, it*100, it/4)))
+            )
+            cloud.radius = it.toFloat()
+            cloud.duration = it*100
+            world.addFreshEntity(cloud)
         }
     }
 
-
-
-    override fun manifestIn(caster: PlayerEntity, world: ServerWorld, entity: Entity, count: Int): Spirit.Manifestation {
+    override fun manifestIn(caster: Player, world: ServerLevel, entity: Entity, count: Int): Spirit.Manifestation {
         if(entity !is LivingEntity)
             return Spirit.NONE_MANIFESTATION
         else
             return Spirit.Manifestation(1,count){
-                val effect=StatusEffectInstance(potionEffect, it*200, it/3)
-                entity.addStatusEffect(effect)
+                entity.addEffect(MobEffectInstance(potionEffect, it*200, it/3))
             }
     }
 
-
-
-    override fun lookIn(caster: PlayerEntity, world: ServerWorld, entity: Entity): Boolean {
-        return (entity is LivingEntity && entity.statusEffects.any { effect -> effect.effectType==potionEffect })
+    override fun lookIn(caster: Player, world: ServerLevel, entity: Entity): Boolean {
+        return entity is LivingEntity && entity.activeEffects.any { it.effect == potionEffect }
     }
 
-    override fun lookAt(caster: PlayerEntity, world: ServerWorld, position: Vec3d): Boolean {
+    override fun lookAt(caster: Player, world: ServerLevel, position: Vec3): Boolean {
         return false
     }
 
-
-
-    override fun equals(other: Any?): Boolean = other is PotionSpirit && potionEffect===other.potionEffect
+    override fun equals(other: Any?): Boolean = other is PotionSpirit && potionEffect == other.potionEffect
 
     override fun hashCode(): Int = potionEffect.hashCode()*36
 
+    override fun getColor(): Int = potionEffect.value().color
 
-    override fun getColor(): Int = potionEffect.color
+    override fun getName(): Component = potionEffect.value().displayName
 
-    override fun getName(): Text = potionEffect.name
-
-    override fun serialize(): NbtElement {
-        return NbtString.of(Registry.STATUS_EFFECT.getId(potionEffect).toString())
+    override fun serialize(): Tag {
+        return StringTag.valueOf(
+            (BuiltInRegistries.MOB_EFFECT.getKey(potionEffect.value()) ?: return StringTag.valueOf("")).toString()
+        )
     }
-
-
 
     override fun getType(): Spirit.SpiritType<*> = Type
 
     object Type: Spirit.SpiritType<PotionSpirit>{
-        override fun getName(): Text {
-            return Text.translatable("hexlink.spirit.potion")
-        }
+        override fun getName(): Component = Component.translatable("hexlink.spirit.potion")
 
-        override fun deserialize(nbt: NbtElement): PotionSpirit? {
-            if(nbt is NbtString){
-                val type=Registry.STATUS_EFFECT.getOrEmpty(Identifier.tryParse(nbt.asString())).getOrNull() ?: return null
-                return PotionSpirit(type)
-            }
-            else throw IllegalArgumentException()
+        override fun deserialize(nbt: Tag): PotionSpirit? {
+            if(nbt !is StringTag) throw IllegalArgumentException()
+            val id = ResourceLocation.tryParse(nbt.asString) ?: return null
+            val effect = BuiltInRegistries.MOB_EFFECT.getHolder(id).orElse(null) ?: return null
+            return PotionSpirit(effect)
         }
     }
-
-
-
-
-
 }

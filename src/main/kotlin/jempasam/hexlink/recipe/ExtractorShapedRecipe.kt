@@ -1,64 +1,64 @@
 package jempasam.hexlink.recipe
 
-import com.google.gson.JsonObject
+import com.mojang.serialization.MapCodec
 import jempasam.hexlink.item.functionnality.ExtractorItem
 import jempasam.hexlink.spirit.extractor.NodeExtractor
-import net.minecraft.inventory.CraftingInventory
-import net.minecraft.item.ItemStack
-import net.minecraft.network.PacketByteBuf
-import net.minecraft.recipe.CraftingRecipe
-import net.minecraft.recipe.Ingredient
-import net.minecraft.recipe.RecipeSerializer
-import net.minecraft.recipe.ShapedRecipe
-import net.minecraft.util.Identifier
-import net.minecraft.util.collection.DefaultedList
-import net.minecraft.world.World
+import net.minecraft.core.HolderLookup
+import net.minecraft.core.NonNullList
+import net.minecraft.network.RegistryFriendlyByteBuf
+import net.minecraft.network.codec.StreamCodec
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.crafting.CraftingBookCategory
+import net.minecraft.world.item.crafting.CraftingInput
+import net.minecraft.world.item.crafting.CraftingRecipe
+import net.minecraft.world.item.crafting.Ingredient
+import net.minecraft.world.item.crafting.RecipeSerializer
+import net.minecraft.world.item.crafting.ShapedRecipe
+import net.minecraft.world.level.Level
 
+/**
+ * A shaped recipe that copies the extractor id from its inputs onto the crafted item.
+ */
 class ExtractorShapedRecipe(val recipe: ShapedRecipe) : CraftingRecipe {
 
-    override fun craft(craftingInventory: CraftingInventory): ItemStack {
-        val result=recipe.craft(craftingInventory)
-        val resultItem=result.item
-        if(resultItem is ExtractorItem){
-            var extractor: NodeExtractor?=null
-            for(i in 0 until craftingInventory.size()){
-                val stack=craftingInventory.getStack(i)
-                val item=stack.item
-                if(item is ExtractorItem){
-                    val ext=item.getExtractor(stack)
-                    if(ext!=null && extractor==null)extractor=ext
+    override fun assemble(input: CraftingInput, registries: HolderLookup.Provider): ItemStack {
+        val result = recipe.assemble(input, registries)
+        val resultItem = result.item
+        if (resultItem is ExtractorItem) {
+            var extractor: NodeExtractor? = null
+            for (i in 0 until input.size()) {
+                val item = input.getItem(i).item
+                if (item is ExtractorItem) {
+                    val ext = item.getExtractor(input.getItem(i))
+                    if (ext != null && extractor == null) extractor = ext
                 }
             }
-            if(extractor!=null)resultItem.setExtractor(result, extractor)
+            if (extractor != null) resultItem.setExtractor(result, extractor)
         }
         return result
     }
 
-    override fun matches(inventory: CraftingInventory, world: World): Boolean = recipe.matches(inventory,world)
+    override fun matches(input: CraftingInput, world: Level): Boolean = recipe.matches(input, world)
 
-    override fun getId(): Identifier = recipe.id
+    override fun canCraftInDimensions(width: Int, height: Int): Boolean = recipe.canCraftInDimensions(width, height)
 
-    override fun fits(width: Int, height: Int): Boolean = recipe.fits(width,height)
+    override fun getResultItem(registries: HolderLookup.Provider): ItemStack = recipe.getResultItem(registries)
 
-    override fun getOutput(): ItemStack = recipe.output
-
-    override fun getIngredients(): DefaultedList<Ingredient> = recipe.ingredients
+    override fun getIngredients(): NonNullList<Ingredient> = recipe.ingredients
 
     override fun getGroup(): String = recipe.group
 
+    override fun category(): CraftingBookCategory = recipe.category()
+
     override fun getSerializer(): RecipeSerializer<*> = SERIALIZER
 
-
     object SERIALIZER : RecipeSerializer<ExtractorShapedRecipe> {
-        val SHAPELESS_SERIALIZER= ShapedRecipe.Serializer()
-        override fun read(identifier: Identifier, jsonObject: JsonObject): ExtractorShapedRecipe
-                = ExtractorShapedRecipe(SHAPELESS_SERIALIZER.read(identifier,jsonObject))
+        private val SHAPED_SERIALIZER = ShapedRecipe.Serializer()
 
-        override fun read(identifier: Identifier, packetByteBuf: PacketByteBuf): ExtractorShapedRecipe
-                = ExtractorShapedRecipe(SHAPELESS_SERIALIZER.read(identifier,packetByteBuf))
+        override fun codec(): MapCodec<ExtractorShapedRecipe> =
+            SHAPED_SERIALIZER.codec().xmap(::ExtractorShapedRecipe, ExtractorShapedRecipe::recipe)
 
-        override fun write(packetByteBuf: PacketByteBuf, shapelessRecipe: ExtractorShapedRecipe)
-                = SHAPELESS_SERIALIZER.write(packetByteBuf, shapelessRecipe.recipe)
+        override fun streamCodec(): StreamCodec<RegistryFriendlyByteBuf, ExtractorShapedRecipe> =
+            SHAPED_SERIALIZER.streamCodec().map(::ExtractorShapedRecipe, ExtractorShapedRecipe::recipe)
     }
-
 }

@@ -1,8 +1,9 @@
 package jempasam.hexlink.item
 
-import at.petrak.hexcasting.api.utils.asCompound
 import at.petrak.hexcasting.api.utils.getOrCreateList
 import at.petrak.hexcasting.api.utils.putCompound
+import jempasam.hexlink.utils.editNbt
+import jempasam.hexlink.utils.readNbt
 import jempasam.hexlink.item.functionnality.ItemScrollable
 import jempasam.hexlink.item.functionnality.ItemSpiritSource
 import jempasam.hexlink.item.functionnality.ItemSpiritTarget
@@ -10,28 +11,44 @@ import jempasam.hexlink.spirit.Spirit
 import jempasam.hexlink.spirit.inout.SpiritSource
 import jempasam.hexlink.spirit.inout.SpiritTarget
 import jempasam.hexlink.utils.NbtHelper
-import net.minecraft.client.item.TooltipContext
-import net.minecraft.item.Item
-import net.minecraft.item.ItemStack
-import net.minecraft.nbt.NbtCompound
-import net.minecraft.nbt.NbtElement
-import net.minecraft.nbt.NbtList
-import net.minecraft.server.network.ServerPlayerEntity
-import net.minecraft.text.Text
-import net.minecraft.util.DyeColor
-import net.minecraft.util.Hand
-import net.minecraft.world.World
+import net.minecraft.world.item.Item.TooltipContext
+import net.minecraft.world.item.Item
+import net.minecraft.world.item.ItemStack
+import net.minecraft.nbt.CompoundTag
+import net.minecraft.nbt.Tag
+import net.minecraft.nbt.ListTag
+import net.minecraft.server.level.ServerPlayer
+import net.minecraft.network.chat.Component
+import net.minecraft.world.item.DyeColor
+import net.minecraft.world.item.TooltipFlag
+import net.minecraft.world.InteractionHand
+import net.minecraft.world.level.Level
 import kotlin.math.min
 
-class SoulContainerItem(settings: Settings, val maxBoxCount: Int, val max_soul_count: Int): Item(settings), ItemSpiritSource, ItemSpiritTarget, ItemScrollable {
+class SoulContainerItem(settings: Item.Properties, val maxBoxCount: Int, val max_soul_count: Int): Item(settings), ItemSpiritSource, ItemSpiritTarget, ItemScrollable {
 
+    /**
+     * The stack's soul list, or null when it has none.
+     *
+     * The list is read out of the stack's custom data, so mutations must be flushed back with
+     * [editSouls] — otherwise they only touch a detached copy.
+     */
     fun souls(stack: ItemStack): Souls?
-        = stack.nbt?.getList("souls", NbtElement.COMPOUND_TYPE.toInt())?.let { Souls(it) }
+        = stack.readNbt { it.getList("souls", Tag.TAG_COMPOUND.toInt()) }?.let { Souls(it) }
+
+    /** Run [block] over the stack's soul list, creating and storing it when absent. */
+    fun editSouls(stack: ItemStack, block: (Souls) -> Unit) {
+        stack.editNbt { tag ->
+            val list = tag.getList("souls", Tag.TAG_COMPOUND.toInt())
+            block(Souls(list))
+            tag.put("souls", list)
+        }
+    }
 
     fun soulsOrCreate(stack: ItemStack): Souls
-        = stack.orCreateNbt.getOrCreateList("souls", NbtElement.COMPOUND_TYPE).let { Souls(it) }
+        = Souls(stack.readNbt { it.getOrCreateList("souls", Tag.TAG_COMPOUND.toInt()) } ?: ListTag())
 
-    class Souls(val nbt: NbtList): Sequence<SoulStack>{
+    class Souls(val nbt: ListTag): Sequence<SoulStack>{
 
         fun remove(stack: SoulStack) = nbt.remove(stack.nbt)
         fun remove(index: Int) = nbt.removeAt(index)
@@ -58,7 +75,7 @@ class SoulContainerItem(settings: Settings, val maxBoxCount: Int, val max_soul_c
         fun getOrCreate(spirit: Spirit): SoulStack{
             val entry=get(spirit)
             if(entry==null){
-                val newEntry=NbtCompound()
+                val newEntry=CompoundTag()
                 newEntry.put("spirit",NbtHelper.writeSpirit(spirit))
                 newEntry.putInt("count",0)
                 nbt.add(newEntry)
@@ -68,26 +85,26 @@ class SoulContainerItem(settings: Settings, val maxBoxCount: Int, val max_soul_c
         }
 
         fun add(spirit: Spirit, count: Int){
-            val compound=NbtCompound()
+            val compound=CompoundTag()
             compound.putInt("count", count)
             compound.putCompound("spirit", NbtHelper.writeSpirit(spirit))
             nbt.add(compound)
         }
 
         fun add(index: Int, spirit: Spirit, count: Int){
-            val compound=NbtCompound()
+            val compound=CompoundTag()
             compound.putInt("count", count)
             compound.putCompound("spirit", NbtHelper.writeSpirit(spirit))
             nbt.add(index,compound)
         }
 
         override fun iterator(): Iterator<SoulStack> {
-            return nbt.asSequence().map{ SoulStack(it.asCompound) }.iterator()
+            return nbt.asSequence().mapNotNull { it as? CompoundTag }.map { SoulStack(it) }.iterator()
         }
 
     }
 
-    class SoulStack(val nbt: NbtCompound){
+    class SoulStack(val nbt: CompoundTag){
         var count: Int
             get()= nbt.getInt("count")
             set(value)= nbt.putInt("count", value)
@@ -99,29 +116,29 @@ class SoulContainerItem(settings: Settings, val maxBoxCount: Int, val max_soul_c
                 else nbt.putCompound("spirit", NbtHelper.writeSpirit(value))
             }
 
-        val spirit_nbt: NbtCompound get() =  nbt.getCompound("spirit")
+        val spirit_nbt: CompoundTag get() =  nbt.getCompound("spirit")
     }
 
     fun last(stack: ItemStack): Spirit?
         = souls(stack)?.let { if(it.size>0) it.get(it.size-1) else null }?.spirit
 
-    override fun isItemBarVisible(stack: ItemStack): Boolean
+    override fun isBarVisible(stack: ItemStack): Boolean
         = souls(stack)?.size?.let { it!=maxBoxCount && it!=0 } ?: false
 
-    override fun getItemBarStep(stack: ItemStack): Int {
+    override fun getBarWidth(stack: ItemStack): Int {
         val souls=souls(stack)
         return (13.0f*(souls?.size ?: 0)/maxBoxCount).toInt()
     }
 
-    override fun getItemBarColor(stack: ItemStack): Int {
-        return last(stack)?.getColor() ?: DyeColor.MAGENTA.fireworkColor
+    override fun getBarColor(stack: ItemStack): Int {
+        return last(stack)?.getColor() ?: DyeColor.MAGENTA.getFireworkColor()
     }
 
-    override fun getName(stack: ItemStack): Text
-        = last(stack) ?.getName() ?.let{Text.translatable(getTranslationKey(stack), it)}
-            ?: Text.translatable(getTranslationKey(stack)+".none")
+    override fun getName(stack: ItemStack): Component
+        = last(stack) ?.getName() ?.let{Component.translatable(getDescriptionId(stack), it)}
+            ?: Component.translatable(getDescriptionId(stack)+".none")
 
-    override fun appendTooltip(stack: ItemStack, world: World?, tooltip: MutableList<Text>, context: TooltipContext) {
+    override fun appendHoverText(stack: ItemStack, context: TooltipContext, tooltip: MutableList<Component>, flag: TooltipFlag) {
         val souls=souls(stack) ?: return
         for(i in 0..<souls.size){
             val spiritstack=souls.get(i)
@@ -129,9 +146,9 @@ class SoulContainerItem(settings: Settings, val maxBoxCount: Int, val max_soul_c
             if(spiritstack.count>0){
                 tooltip.add(
                         spirit.getName().copy()
-                                .append(Text.of(" ("))
-                                .append(Text.of(spiritstack.count.toString()))
-                                .append(Text.of(")"))
+                                .append(Component.literal(" ("))
+                                .append(Component.literal(spiritstack.count.toString()))
+                                .append(Component.literal(")"))
                 )
             }
         }
@@ -146,9 +163,12 @@ class SoulContainerItem(settings: Settings, val maxBoxCount: Int, val max_soul_c
                 return SpiritSource.SpiritOutputFlux(
                     final_count
                 ) {
-                    val newcount = entry.count - it
-                    if (newcount <= 0) souls.remove(entry)
-                    else entry.count = newcount
+                    editSouls(stack) { live ->
+                        val liveEntry = live.get(spirit) ?: return@editSouls
+                        val newcount = liveEntry.count - it
+                        if (newcount <= 0) live.remove(liveEntry)
+                        else liveEntry.count = newcount
+                    }
                 }
             }
 
@@ -172,8 +192,10 @@ class SoulContainerItem(settings: Settings, val maxBoxCount: Int, val max_soul_c
 
                     return SpiritTarget.SpiritInputFlux(
                             {
-                                val entry=souls.getOrCreate(spirit)
-                                entry.count+=min(it,offset)
+                                editSouls(stack) { live ->
+                                    val entry=live.getOrCreate(spirit)
+                                    entry.count+=min(it,offset)
+                                }
                             },
                             offset
                     )
@@ -183,9 +205,10 @@ class SoulContainerItem(settings: Settings, val maxBoxCount: Int, val max_soul_c
         }
     }
 
-    override fun roll(stack: ItemStack, player: ServerPlayerEntity, hand: Hand, delta: Double) {
-        val souls=souls(stack)
-        if(souls!=null && souls.size>1){
+    override fun roll(stack: ItemStack, player: ServerPlayer, hand: InteractionHand, delta: Double) {
+        val current=souls(stack)
+        if(current==null || current.size<=1) return
+        editSouls(stack) { souls ->
             if(delta>0){
                 val top=souls.get(0)
                 val spirit=top.spirit

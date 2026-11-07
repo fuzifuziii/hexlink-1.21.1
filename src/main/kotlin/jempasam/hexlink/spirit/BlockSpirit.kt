@@ -1,33 +1,32 @@
 package jempasam.hexlink.spirit
 
-import net.minecraft.block.Block
-import net.minecraft.entity.Entity
-import net.minecraft.entity.FallingBlockEntity
-import net.minecraft.entity.player.PlayerEntity
-import net.minecraft.item.BlockItem
-import net.minecraft.nbt.NbtElement
-import net.minecraft.nbt.NbtString
-import net.minecraft.server.world.ServerWorld
-import net.minecraft.text.Text
-import net.minecraft.util.Hand
-import net.minecraft.util.Identifier
-import net.minecraft.util.hit.BlockHitResult
-import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.Direction
-import net.minecraft.util.math.Vec3d
-import net.minecraft.util.registry.Registry
-import kotlin.jvm.optionals.getOrNull
+import net.minecraft.core.BlockPos
+import net.minecraft.core.Direction
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.nbt.StringTag
+import net.minecraft.nbt.Tag
+import net.minecraft.network.chat.Component
+import net.minecraft.resources.ResourceLocation
+import net.minecraft.server.level.ServerLevel
+import net.minecraft.world.InteractionHand
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.item.FallingBlockEntity
+import net.minecraft.world.entity.player.Player
+import net.minecraft.world.item.BlockItem
+import net.minecraft.world.level.block.Block
+import net.minecraft.world.phys.BlockHitResult
+import net.minecraft.world.phys.Vec3
 
 //TODO Long time block interaction with manifestation
 class BlockSpirit(val block: Block): Spirit{
 
-    override fun manifestAt(caster: PlayerEntity, world: ServerWorld, position: Vec3d, power: Int): Spirit.Manifestation {
-        val startpos=BlockPos(position)
+    override fun manifestAt(caster: Player, world: ServerLevel, position: Vec3, power: Int): Spirit.Manifestation {
+        val startpos=BlockPos.containing(position)
         var testpos=startpos
         var finalPower=0
         while(finalPower<power){
             if(!world.getBlockState(testpos).isAir) break
-            testpos=testpos.up()
+            testpos=testpos.above()
             finalPower++
         }
         if(finalPower==0)return Spirit.NONE_MANIFESTATION
@@ -35,51 +34,52 @@ class BlockSpirit(val block: Block): Spirit{
         return Spirit.Manifestation(3, finalPower){
             var blockpos=startpos
             for(i in 0..<it){
-                world.setBlockState(blockpos, block.defaultState)
-                blockpos=blockpos.up()
+                world.setBlock(blockpos, block.defaultBlockState(), 3)
+                blockpos=blockpos.above()
             }
         }
     }
 
-    override fun manifestIn(caster: PlayerEntity, world: ServerWorld, entity: Entity, count: Int): Spirit.Manifestation {
+    override fun manifestIn(caster: Player, world: ServerLevel, entity: Entity, count: Int): Spirit.Manifestation {
         return Spirit.Manifestation(1,1){
-            val pos=BlockPos(entity.pos)
-            val state=block.defaultState
-            block.onEntityCollision(state, world, pos, entity)
-            block.onSteppedOn(world, pos, state, entity)
-            if(entity is PlayerEntity){
-                block.onUse(state, world, pos, entity, Hand.MAIN_HAND, BlockHitResult(entity.pos, Direction.UP, BlockPos(entity.pos), true))
+            val pos=BlockPos.containing(entity.position())
+            val state=block.defaultBlockState()
+            state.entityInside(world, pos, entity)
+            block.stepOn(world, pos, state, entity)
+            if(entity is Player){
+                val hit = BlockHitResult(entity.position(), Direction.UP, pos, true)
+                state.useItemOn(entity.mainHandItem, world, entity, InteractionHand.MAIN_HAND, hit)
             }
         }
     }
 
-    override fun manifestBetween(caster: PlayerEntity, world: ServerWorld, from: Vec3d, to: Vec3d, count: Int): Spirit.Manifestation {
-        val blockpos=BlockPos(from)
+    override fun manifestBetween(caster: Player, world: ServerLevel, from: Vec3, to: Vec3, count: Int): Spirit.Manifestation {
+        val blockpos=BlockPos.containing(from)
         if(!world.getBlockState(blockpos).isAir)return Spirit.NONE_MANIFESTATION
         return Spirit.Manifestation(1,count){
             var direction=to.subtract(from)
-            if(direction.length()>5)direction=direction.normalize().multiply(5.0)
+            if(direction.length()>5)direction=direction.normalize().scale(5.0)
             for(i in 0..<it){
-                val falling=FallingBlockEntity.spawnFromBlock(world, blockpos, block.defaultState)
-                falling.setVelocity(direction.x, direction.y+i*0.5, direction.z)
+                val falling=FallingBlockEntity.fall(world, blockpos, block.defaultBlockState())
+                falling.setDeltaMovement(direction.x, direction.y+i*0.5, direction.z)
             }
         }
     }
 
-    override fun manifestBetween(caster: PlayerEntity, world: ServerWorld, from: Entity, to: Vec3d, count: Int): Spirit.Manifestation {
-        return super.manifestBetween(caster, world, from.pos, to, count)
+    override fun manifestBetween(caster: Player, world: ServerLevel, from: Entity, to: Vec3, count: Int): Spirit.Manifestation {
+        return super.manifestBetween(caster, world, from.position(), to, count)
     }
 
-    override fun manifestBetween(caster: PlayerEntity, world: ServerWorld, from: Entity, to: Entity, count: Int): Spirit.Manifestation {
-        return super.manifestBetween(caster, world, from.pos, to.pos, count)
+    override fun manifestBetween(caster: Player, world: ServerLevel, from: Entity, to: Entity, count: Int): Spirit.Manifestation {
+        return super.manifestBetween(caster, world, from.position(), to.position(), count)
     }
 
 
-    override fun lookAt(caster: PlayerEntity, world: ServerWorld, position: Vec3d): Boolean {
-        return world.getBlockState(BlockPos(position)).block==block
+    override fun lookAt(caster: Player, world: ServerLevel, position: Vec3): Boolean {
+        return world.getBlockState(BlockPos.containing(position)).block==block
     }
 
-    override fun lookIn(caster: PlayerEntity, world: ServerWorld, entity: Entity): Boolean {
+    override fun lookIn(caster: Player, world: ServerLevel, entity: Entity): Boolean {
         val stack= StackHelper.stack(caster,entity) ?: return false
         val item=stack.stack.item
         if(item !is BlockItem)return false
@@ -94,12 +94,12 @@ class BlockSpirit(val block: Block): Spirit{
 
 
 
-    override fun getColor(): Int = block.defaultMapColor.color
+    override fun getColor(): Int = block.defaultMapColor().col
 
-    override fun getName(): Text = block.name
+    override fun getName(): Component = block.name
 
-    override fun serialize(): NbtElement {
-        return NbtString.of(Registry.BLOCK.getId(block).toString())
+    override fun serialize(): Tag {
+        return StringTag.valueOf(BuiltInRegistries.BLOCK.getKey(block).toString())
     }
 
 
@@ -107,16 +107,13 @@ class BlockSpirit(val block: Block): Spirit{
     override fun getType(): Spirit.SpiritType<*> = Type
 
     object Type: Spirit.SpiritType<BlockSpirit>{
-        override fun getName(): Text {
-            return Text.translatable("hexlink.spirit.block")
-        }
+        override fun getName(): Component = Component.translatable("hexlink.spirit.block")
 
-        override fun deserialize(nbt: NbtElement): BlockSpirit? {
-            if(nbt is NbtString){
-                val type=Registry.BLOCK.getOrEmpty(Identifier(nbt.asString())).getOrNull() ?: return null
-                return BlockSpirit(type)
-            }
-            else throw IllegalArgumentException()
+        override fun deserialize(nbt: Tag): BlockSpirit? {
+            if(nbt !is StringTag) throw IllegalArgumentException()
+            val id = ResourceLocation.tryParse(nbt.asString) ?: return null
+            val type = BuiltInRegistries.BLOCK.getOptional(id).orElse(null) ?: return null
+            return BlockSpirit(type)
         }
     }
 

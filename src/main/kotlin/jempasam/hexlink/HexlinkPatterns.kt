@@ -1,92 +1,95 @@
 package jempasam.hexlink
 
-import at.petrak.hexcasting.api.PatternRegistry
+import at.petrak.hexcasting.api.casting.ActionRegistryEntry
+import at.petrak.hexcasting.api.casting.castables.Action
+import at.petrak.hexcasting.api.casting.math.HexDir
+import at.petrak.hexcasting.api.casting.math.HexPattern
 import at.petrak.hexcasting.api.misc.MediaConstants
-import at.petrak.hexcasting.api.spell.Action
-import at.petrak.hexcasting.api.spell.math.HexDir
-import at.petrak.hexcasting.api.spell.math.HexPattern
+import at.petrak.hexcasting.xplat.IXplatAbstractions
 import jempasam.hexlink.operators.OpSpiritTest
 import jempasam.hexlink.operators.OpStub
 import jempasam.hexlink.operators.spells.*
 import jempasam.hexlink.operators.spiritinfo.OpGetSpiritIota
 import jempasam.hexlink.operators.spiritinfo.OpGetSpiritListIota
 import jempasam.hexlink.operators.spiritinfo.OpSpiritCountIota
-import net.fabricmc.loader.api.FabricLoader
-import net.minecraft.util.Identifier
+import net.minecraft.core.Registry
+import net.minecraft.resources.ResourceLocation
 
 object HexlinkPatterns {
 
-    private fun register(id: String, pattern: HexPattern, op : Action){
-        PatternRegistry.mapPattern(pattern, Identifier(HexlinkMod.MODID,id), op)
+    private val PATTERNS = mutableMapOf<ResourceLocation, ActionRegistryEntry>()
+
+    private fun register(id: String, pattern: HexPattern, op: Action) {
+        PATTERNS[ResourceLocation.fromNamespaceAndPath(HexlinkMod.MODID, id)] = ActionRegistryEntry(pattern, op)
     }
 
-    private fun registerFor(modid: String, id: String, pattern: HexPattern, op: ()->()->Action){
-        if(FabricLoader.getInstance().isModLoaded(modid)){
-            PatternRegistry.mapPattern(pattern, Identifier(HexlinkMod.MODID,id), op()())
+    private fun registerFor(modid: String, id: String, pattern: HexPattern, op: () -> () -> Action) {
+        if (IXplatAbstractions.INSTANCE.isModPresent(modid)) {
+            register(id, pattern, op()())
+        } else {
+            register(id, pattern, OpStub(modid))
         }
-        else PatternRegistry.mapPattern(pattern, Identifier(HexlinkMod.MODID,id), OpStub(modid))
     }
 
-    fun registerAll(){
+    /** Called from the NeoForge `RegisterEvent` for HexCasting's action registry. */
+    fun registerAll(registry: Registry<ActionRegistryEntry>) {
+        for ((id, entry) in PATTERNS) {
+            Registry.register(registry, id, entry)
+        }
+    }
 
+    init {
         register("spirit_extraction",
-                HexPattern.fromAngles("aawddaweddwaa",HexDir.NORTH_EAST),
-                OpExtractSpirit()
+            HexPattern.fromAngleString("aawddaweddwaa", HexDir.NORTH_EAST),
+            OpExtractSpirit()
         )
 
         register("spirit_transfer",
-                HexPattern.fromAngles("aawddawdaqqqa",HexDir.NORTH_EAST),
-                OpSpiritTransfer()
+            HexPattern.fromAngleString("aawddawdaqqqa", HexDir.NORTH_EAST),
+            OpSpiritTransfer()
         )
         register("spirit_transfer_look",
-                HexPattern.fromAngles("aawddaeqqqqq",HexDir.NORTH_EAST),
-                OpGetSpiritIota(false)
+            HexPattern.fromAngleString("aawddaeqqqqq", HexDir.NORTH_EAST),
+            OpGetSpiritIota(false)
         )
         register("spirit_transfer_look_all",
-            HexPattern.fromAngles("aawddaqeeeee",HexDir.NORTH_EAST),
+            HexPattern.fromAngleString("aawddaqeeeee", HexDir.NORTH_EAST),
             OpGetSpiritListIota(false)
         )
 
         register("spirit_self_transfer_look",
-                HexPattern.fromAngles("aawddaeqqqqqaw",HexDir.NORTH_EAST),
-                OpGetSpiritIota(true)
+            HexPattern.fromAngleString("aawddaeqqqqqaw", HexDir.NORTH_EAST),
+            OpGetSpiritIota(true)
         )
 
-
         register("spirit_transfer_count",
-                HexPattern.fromAngles("aawddaeqq",HexDir.NORTH_EAST),
-                OpSpiritCountIota(false)
+            HexPattern.fromAngleString("aawddaeqq", HexDir.NORTH_EAST),
+            OpSpiritCountIota(false)
         )
 
         register("spirit_self_transfer_count",
-                HexPattern.fromAngles("aawddaeqqaw",HexDir.NORTH_EAST),
-                OpSpiritCountIota(true)
-        )
-
-        register("spirit_vortex",
-                HexPattern.fromAngles("aawddaweaqa",HexDir.NORTH_EAST),
-                OpVortexSpirit()
+            HexPattern.fromAngleString("aawddaeqqaw", HexDir.NORTH_EAST),
+            OpSpiritCountIota(true)
         )
 
         register("spirit_manifestation",
-                HexPattern.fromAngles("aawddaweqaeaq",HexDir.NORTH_EAST),
-                OpManisfestSpirit(false)
+            HexPattern.fromAngleString("aawddaweqaeaq", HexDir.NORTH_EAST),
+            OpManisfestSpirit(false)
         )
 
         register("spirit_self_manifestation",
-                HexPattern.fromAngles("aawddaweqaeaqa",HexDir.NORTH_EAST),
-                OpManisfestSpirit(true)
+            HexPattern.fromAngleString("aawddaweqaeaqa", HexDir.NORTH_EAST),
+            OpManisfestSpirit(true)
         )
 
         register("spirit_look",
-                HexPattern.fromAngles("aawddaweqqqqq",HexDir.NORTH_EAST),
-                OpSpiritTest()
+            HexPattern.fromAngleString("aawddaweqqqqq", HexDir.NORTH_EAST),
+            OpSpiritTest()
         )
 
-
         register("write_spell",
-                HexPattern.fromAngles("waaddaawwwddaaddwaweqqqqqwaeaeaeaeaeaqwwwewddaaddwwwaaddaaw",HexDir.NORTH_EAST),
-                OpFillSpell(MediaConstants.CRYSTAL_UNIT)
+            HexPattern.fromAngleString("waaddaawwwddaaddwaweqqqqqwaeaeaeaeaeaqwwwewddaaddwwwaaddaaw", HexDir.NORTH_EAST),
+            OpFillSpell(MediaConstants.CRYSTAL_UNIT.toInt())
         )
     }
 }

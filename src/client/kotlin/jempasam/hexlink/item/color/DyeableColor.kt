@@ -1,15 +1,18 @@
 package jempasam.hexlink.item.color
 
-import net.minecraft.client.color.item.ItemColorProvider
-import net.minecraft.item.DyeableItem
-import net.minecraft.item.ItemStack
+import net.minecraft.client.color.item.ItemColor
+import net.minecraft.core.component.DataComponents
+import net.minecraft.world.item.ItemStack
 
-class DyeableColor(val index: Int=1) : ItemColorProvider {
+/**
+ * Tints an item with its `minecraft:dyed_color` component.
+ *
+ * 1.21 turned dyeing into a data component on the stack, so the item itself no longer
+ * carries the colour; an undyed stack yields -1.
+ */
+class DyeableColor(val index: Int=1) : ItemColor {
     override fun getColor(stack: ItemStack, tintIndex: Int): Int {
-        val item=stack.item
-        if(item is DyeableItem){
-            if(tintIndex==index)return item.getColor(stack)
-        }
-        return -1
+        if(tintIndex!=index)return -1
+        return stack.get(DataComponents.DYED_COLOR)?.rgb()?.let(::opaque) ?: -1
     }
 }

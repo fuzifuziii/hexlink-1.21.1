@@ -4,8 +4,8 @@ import com.google.gson.JsonObject
 import com.mojang.serialization.Codec
 import jempasam.hexlink.spirit.ItemSpirit
 import jempasam.hexlink.spirit.StackHelper
-import net.minecraft.item.BlockItem
-import net.minecraft.util.JsonHelper
+import net.minecraft.world.item.BlockItem
+import net.minecraft.util.GsonHelper
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -35,7 +35,7 @@ class ItemExtNode(val useDurability: Boolean) : ExtractionNode {
     }
 
     object Parser: ExtractionNode.Parser<ItemExtNode> {
-        override fun parse(obj: JsonObject) = ItemExtNode(JsonHelper.getBoolean(obj,"useDurability",false))
+        override fun parse(obj: JsonObject) = ItemExtNode(GsonHelper.getAsBoolean(obj,"useDurability",false))
     }
 
     val CODEC get() = Codec.unit(ItemExtNode(true))
